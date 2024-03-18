@@ -1,0 +1,29 @@
+{
+  "name": "com.sator-imaging.unity-lifecycle-manager",
+  "displayName": "MonoBehaviour Lifecycle Manager",
+  "version": "0.9.0",
+  "unity": "2021.3",
+  "description": "MonoBehaviour lifecycle and update function manager.",
+  "author": {
+    "name": "Sator Imaging",
+    "url": "https://twitter.com/sator_imaging"
+  },
+  "category": "Unity",
+  "keywords": [
+    "unity",
+    "monoBehaviour",
+    "lifecycle",
+    "updateManager",
+    "cancellationToken"
+  ],
+  "dependencies": {
+  },
+  "repository": {
+    "type": "git",
+    "url":            "https://github.com/sator-imaging/Unity-LifecycleManager.git"
+  },
+  "url":              "https://github.com/sator-imaging/Unity-LifecycleManager.git",
+  "documentationUrl": "https://sator-imaging.github.io/Unity-LifecycleManager",
+  "changelogUrl":     "https://github.com/sator-imaging/Unity-LifecycleManager.git",
+  "licensesUrl":      "https://www.sator-imaging.com/"
+}
