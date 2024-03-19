@@ -12,6 +12,7 @@ And also! library provides missing `destroyCancellationToken` feature for Unity 
 - [Update Function Manager](#update-function-manager)
     - Designed to address consideration written in the following article
     - https://blog.unity.com/engine-platform/10000-update-calls
+- [API Reference](https://sator-imaging.github.io/Unity-LifecycleManager)
 
 **Installation**
 - In Unity 2021 or later, Enter the following URL in Unity Package Manager (UPM)
@@ -26,15 +27,17 @@ Here is example to bind instance lifetime to cancellation token or MonoBehaviour
 using SatorImaging.LifecycleManager;
 
 // works on Unity 2021 or later
-IDisposable.DestroyWith(monoBehaviourOrCancellationToken);
-unityObj.DestroyWith(cancellationToken);
-component.DestroyWith(tokenOrMonoBehaviour);
+disposable.DestroyWith(monoBehaviourOrCancellationToken);
+gameObject.DestroyWith(cancellationToken);
+unityObj.DestroyUnityObjectWith(tokenOrBehaviour);
 
-// bind to scene lifecycle
-var sceneLifecycle = SceneLifecycle.Get(gameObject.scene);
-disposable.DestroyWith(sceneLifecycle);
-sceneLifecycle.DestroyWith(cancellationToken);  // error
-                                                // scene lifecycle is restricted from being bound
+// bind to unity scene lifetime
+var sceneLifetime = SceneLifetime.Get(gameObject.scene);
+disposable.DestroyWith(sceneLifetime);
+sceneLifetime.Token.Register(() => DoSomethingOnSceneUnloading());
+
+// lifecycle and its GameObject which will be destroyed on scene unloading
+var sceneLC = SceneLifecycle.Get();
 
 // nesting lifecycles
 var root = LifecycleBehaviour.Create("Root Lifecycle");
@@ -45,9 +48,11 @@ grand.DestroyWith(child);
     // --> child and grand will be marked as DontDestroyOnLoad automatically
 
 // action for debugging purpose which will be invoked before binding (when not null)
-LifetimeExtensions.DebuggerAction = (obj, token, ticket) =>
+LifetimeExtensions.DebuggerAction = (obj, token, ticket, ownerOrNull) =>
 {
     Debug.Log($"Target Object: {obj}");
+    if (ownerOrNull != null)
+        Debug.Log($"Lifetime Owner: {ownerOrNull}");
     Debug.Log($"CancellationToken: {token}");
     Debug.Log($"CancellationTokenRegistration: {ticket}");
 };
@@ -57,21 +62,17 @@ LifetimeExtensions.DebuggerAction = (obj, token, ticket) =>
 Technical Note
 --------------
 
-### Component Binding Notice
+### Unity Object/Component Binding Notice
 
-You can bind `UnityEngine.Component` lifetime to cancellation token or MonoBehaviour, but you
-need to consider both situation component is destroyed by scene unloading OR by lifetime owner.
-As a result, it makes thing really complex and scene will be spaghetti-ed.
+You can bind `UnityEngine.Object` or component lifetime to cancellation token or MonoBehaviour by using
+`DestroyUnityObjectWith` extension method instead of `DestroyWith`.
 
-Strongly recommended that binding GameObject lifetime instead of component.
+Note that when binding unity object lifetime to other, need to consider both situation that component is
+destroyed by scene unloading OR by lifetime owner. As a result, it makes thing really complex and scene
+will be spaghetti-ed.
 
-> [!NOTE]
-> As you know there is `DontDestroyOnLoad` feature in Unity but it is hard to determine that
-> component.gameObject is safe to be marked as `DontDestroyOnLoad` programatically.
-
-> [!TIP]
-> Set preprocessor symbol `LIFECYCLE_DISALLOW_COMPONENT_BINDING` to disallow component binding.
-> When not set, IDE shows underline on use to confirm "are you sure?".
+Strongly recommended that binding GameObject lifetime instead of component, or implement `IDisposable`
+on your unity engine object explicitly to preciously control behaviour.
 
 
 ### Inter-Scene Binding Notice
@@ -80,8 +81,8 @@ Lifetime binding across scenes is restricted. Nevertheless you want to bind life
 scene object, use `DestroyWith(CancellationToken)` method with `monoBehaviour.destroyCancellationToken`.
 
 > [!WARNING]
-> When Unity object bound to another scene object, it will be destroyed by both when scene which
-> containing bound object is unloaded and lifetime owner is destroyed.
+> When Unity object bound to another scene object, it will be destroyed by both when lifetime owner is
+> destroyed and scene which containing bound object is unloaded.
 
 
 ### Quick Tests
@@ -100,11 +101,8 @@ destruction order is NOT stable. For reference, MonoBehaviours (components) will
 when scene is unloaded otherwise destroyed based on binding order.
 
 > [!NOTE]
-> To make destruction order stable, lifetime bound GameObjects are marked as `DontDestroyOnLoad`.
-
-> [!TIP]
-> Set preprocessor symbol `LIFECYCLE_DISABLE_STABLE_DESTROY_ORDER` to disable automatic `DontDestroyOnLoad`.
-> ie. Destruction order could be unstable and object may be destroyed by scene unloading.
+> To make destruction order stable, extension method automatically mark lifetime bound GameObjects as
+> `DontDestroyOnLoad`.
 
 
 
@@ -112,10 +110,6 @@ Update Function Manager
 =======================
 In this feature, each "update" function has 5 stages, Initialize, Early, Normal, Late and Finalize.
 Initialize and Finalize is designed for system usage, other 3 stages are for casual usage.
-
-> [!NOTE]
-> For optimization, removing registered action will swap items in list to prevent array reordering.
-> ie. Execution order of stages are promised but registered action order is NOT promised.
 
 ```csharp
 // create lifecycle behaviour
@@ -139,10 +133,16 @@ var entry = lifecycle.RegisterUpdateLate(...);
 lifecycle.RemoveUpdateLate(entry);
 ```
 
+> [!NOTE]
+> For performance optimization, removing registered action will swap items in list instead of reordering
+> whole items in list.
+> ie. Order of update stages (early, late, etc) are promised but registered action order is NOT promised.
+> (like Unity)
+
 
 Automatic Unregistration
 ------------------------
-If action is depending on instance that will be destroyed with cancellation token, You can specify
+If action is depending on instance that will be destroyed with cancellation token, You have to specify
 same token to unregister action together when token is canceled.
 
 ```csharp
@@ -199,7 +199,7 @@ class UpdateManagerOrganizer : MonoBehaviour
 #nullable enable
 //#undef UNITY_EDITOR           // uncomment to debug
 //#undef UNITY_2022_2_OR_NEWER  // uncomment to debug
-//#define LIFECYCLE_DISALLOW_COMPONENT_BINDING  // uncomment to raise error
+
 
 using System;
 using System.Collections.Generic;
@@ -215,22 +215,21 @@ namespace SatorImaging.LifecycleManager
     /// <summary>
     /// The "Update Manager" functionality with `MonoBehaviour.destroyCancellationToken` support for Unity 2021.
     /// </summary>
+    [DisallowMultipleComponent]  // NOTE: don't remove DisallowMultipleComponent attribute!!
+                                 //       LifetimeOwnerCount logic is searching only 1 lifecycle on GameObject
     public class LifecycleBehaviour : MonoBehaviour
     {
-        public bool IsSceneLifecycle { get; protected set; } = false;
+        const string LOG_PREFIX = "[" + nameof(LifecycleBehaviour) + "] ";
 
-#if UNITY_EDITOR
-        /// <summary>
-        /// See <see cref="LifetimeExtensions.DestroyWith(UnityEngine.Object, LifecycleBehaviour)"/>
-        /// </summary>
-        /// <seealso cref="LifetimeExtensions.DestroyWith(UnityEngine.Object, LifecycleBehaviour)"/>
-        [Obsolete("Editor Only")]
-        [Header("[Editor Only]\nList won't be updated even when object is disposed")]
-        public List<string> LifetimeBoundObjectNames = new();
-#endif
+        // TODO: it's hard and complicated to increment owner count.
+        //       when lifecycle's game object is nested in other hierarchy which is bound to other lifecycle,
+        //       count must be increment but when parenting object is performed after bound to lifecycle,
+        //       count will be incorrect. need to monitor any hierachy change to fix lifetime owner count...
+        //[field: SerializeField]
+        //public int LifetimeOwnerCount { get; internal set; } = 0;
 
-        // polyfill - allocate only when requested
 #if false == UNITY_2022_2_OR_NEWER
+        // polyfill - allocate only when requested
         private CancellationTokenSource? polyfill_destroyToken;
         public CancellationToken destroyCancellationToken => (polyfill_destroyToken ??= new()).Token;
 #endif
@@ -238,27 +237,23 @@ namespace SatorImaging.LifecycleManager
         public void OnDestroy()
         {
 #if UNITY_EDITOR
-            Debug.Log(nameof(LifecycleBehaviour) + ": going to be destroyed: " + this);
+            Debug.Log(LOG_PREFIX + "going to be destroyed: " + this);
 #endif
-            _fixedUpdateStart.Clear();
-            _fixedUpdateEarly.Clear();
-            _fixedUpdateUsual.Clear();
-            _fixedUpdateLater.Clear();
-            _fixedUpdateFinal.Clear();
-            _updateStart.Clear();
-            _updateEarly.Clear();
-            _updateUsual.Clear();
-            _updateLater.Clear();
-            _updateFinal.Clear();
-            _lateUpdateStart.Clear();
-            _lateUpdateEarly.Clear();
-            _lateUpdateUsual.Clear();
-            _lateUpdateLater.Clear();
-            _lateUpdateFinal.Clear();
-
-            // TODO: this should be implemented in derived class!!
-            if (IsSceneLifecycle && this is SceneLifecycle sl)
-                SceneLifecycle.RemoveFromCache(sl);
+            _fixedUpdateStart?.Clear();
+            _fixedUpdateEarly?.Clear();
+            _fixedUpdateUsual?.Clear();
+            _fixedUpdateLater?.Clear();
+            _fixedUpdateFinal?.Clear();
+            _updateStart?.Clear();
+            _updateEarly?.Clear();
+            _updateUsual?.Clear();
+            _updateLater?.Clear();
+            _updateFinal?.Clear();
+            _lateUpdateStart?.Clear();
+            _lateUpdateEarly?.Clear();
+            _lateUpdateUsual?.Clear();
+            _lateUpdateLater?.Clear();
+            _lateUpdateFinal?.Clear();
 
 #if false == UNITY_2022_2_OR_NEWER
             polyfill_destroyToken?.Cancel();
@@ -280,156 +275,126 @@ namespace SatorImaging.LifecycleManager
 
         /*  the update manager  ================================================================ */
 
-        // NOTE: lifecycle is long-living instance. always creating action list is better to avoid null check on all access.
-        // NOTE: 5 letters suffix is for alignment. stage order: Initialize -> Early -> Usual -> Late -> Finalize
-        protected readonly SlotReusingActionList _updateStart = new();
-        protected readonly SlotReusingActionList _updateEarly = new();  // Earlier is antonym of later but Early
-        protected readonly SlotReusingActionList _updateUsual = new();  // Plain, Usual, Exact, Right, etc...
-        protected readonly SlotReusingActionList _updateLater = new();  // Late is antonym of early but Later
-        protected readonly SlotReusingActionList _updateFinal = new();
-        protected readonly SlotReusingActionList _lateUpdateStart = new();
-        protected readonly SlotReusingActionList _lateUpdateEarly = new();
-        protected readonly SlotReusingActionList _lateUpdateUsual = new();
-        protected readonly SlotReusingActionList _lateUpdateLater = new();
-        protected readonly SlotReusingActionList _lateUpdateFinal = new();
-        protected readonly SlotReusingActionList _fixedUpdateStart = new();
-        protected readonly SlotReusingActionList _fixedUpdateEarly = new();
-        protected readonly SlotReusingActionList _fixedUpdateUsual = new();
-        protected readonly SlotReusingActionList _fixedUpdateLater = new();
-        protected readonly SlotReusingActionList _fixedUpdateFinal = new();
+        // NOTE: 5-letter words were chosen for source code alignment!!
+        //       stage order: Initialize -> Early -> Usual -> Late -> Finalize
+        protected UnorderedActionList? _fixedUpdateStart;
+        protected UnorderedActionList? _fixedUpdateEarly;
+        protected UnorderedActionList? _fixedUpdateUsual;
+        protected UnorderedActionList? _fixedUpdateLater;
+        protected UnorderedActionList? _fixedUpdateFinal;
+        protected UnorderedActionList? _updateStart;
+        protected UnorderedActionList? _updateEarly;
+        protected UnorderedActionList? _updateUsual;
+        protected UnorderedActionList? _updateLater;
+        protected UnorderedActionList? _updateFinal;
+        protected UnorderedActionList? _lateUpdateStart;
+        protected UnorderedActionList? _lateUpdateEarly;
+        protected UnorderedActionList? _lateUpdateUsual;
+        protected UnorderedActionList? _lateUpdateLater;
+        protected UnorderedActionList? _lateUpdateFinal;
 
         /// <summary>
-        /// Set `enabled` false and call this method explicitly in "manager of update managers" to control lifecycle execution order.
+        /// Set `enabled` of this mono behaviour false and call this method explicitly in "manager of update managers" to
+        /// control lifecycle execution order while keeping registered action order. (if required)
         /// </summary>
         public void Update()
         {
-            _updateStart.Invoke();
-            _updateEarly.Invoke();
-            _updateUsual.Invoke();
-            _updateLater.Invoke();
-            _updateFinal.Invoke();
+            _updateStart?.Invoke();
+            _updateEarly?.Invoke();
+            _updateUsual?.Invoke();
+            _updateLater?.Invoke();
+            _updateFinal?.Invoke();
         }
 
         /// <inheritdoc cref="Update"/>
         public void LateUpdate()
         {
-            _lateUpdateStart.Invoke();
-            _lateUpdateEarly.Invoke();
-            _lateUpdateUsual.Invoke();
-            _lateUpdateLater.Invoke();
-            _lateUpdateFinal.Invoke();
+            _lateUpdateStart?.Invoke();
+            _lateUpdateEarly?.Invoke();
+            _lateUpdateUsual?.Invoke();
+            _lateUpdateLater?.Invoke();
+            _lateUpdateFinal?.Invoke();
         }
 
         /// <inheritdoc cref="Update"/>
         public void FixedUpdate()
         {
-            _fixedUpdateStart.Invoke();
-            _fixedUpdateEarly.Invoke();
-            _fixedUpdateUsual.Invoke();
-            _fixedUpdateLater.Invoke();
-            _fixedUpdateFinal.Invoke();
+            _fixedUpdateStart?.Invoke();
+            _fixedUpdateEarly?.Invoke();
+            _fixedUpdateUsual?.Invoke();
+            _fixedUpdateLater?.Invoke();
+            _fixedUpdateFinal?.Invoke();
         }
 
 
         // NOTE: /**/ is for blocking auto formatter
-        /// <inheritdoc cref="SlotReusingActionList.Add(Action)"/>
-        public Action? RegisterFixedUpdateInitialize(Action act) /**/ => _fixedUpdateStart.Add(act);
-        /// <inheritdoc cref="SlotReusingActionList.Add(Action)"/>
-        public Action? RegisterFixedUpdateEarly(Action act)      /**/ => _fixedUpdateEarly.Add(act);
-        /// <inheritdoc cref="SlotReusingActionList.Add(Action)"/>
-        public Action? RegisterFixedUpdate(Action act)           /**/ => _fixedUpdateUsual.Add(act);
-        /// <inheritdoc cref="SlotReusingActionList.Add(Action)"/>
-        public Action? RegisterFixedUpdateLate(Action act)       /**/ => _fixedUpdateLater.Add(act);
-        /// <inheritdoc cref="SlotReusingActionList.Add(Action)"/>
-        public Action? RegisterFixedUpdateFinalize(Action act)   /**/ => _fixedUpdateFinal.Add(act);
-        /// <inheritdoc cref="SlotReusingActionList.Add(Action)"/>
-        public Action? RegisterUpdateInitialize(Action act)      /**/ => _updateStart.Add(act);
-        /// <inheritdoc cref="SlotReusingActionList.Add(Action)"/>
-        public Action? RegisterUpdateEarly(Action act)           /**/ => _updateEarly.Add(act);
-        /// <inheritdoc cref="SlotReusingActionList.Add(Action)"/>
-        public Action? RegisterUpdate(Action act)                /**/ => _updateUsual.Add(act);
-        /// <inheritdoc cref="SlotReusingActionList.Add(Action)"/>
-        public Action? RegisterUpdateLate(Action act)            /**/ => _updateLater.Add(act);
-        /// <inheritdoc cref="SlotReusingActionList.Add(Action)"/>
-        public Action? RegisterUpdateFinalize(Action act)        /**/ => _updateFinal.Add(act);
-        /// <inheritdoc cref="SlotReusingActionList.Add(Action)"/>
-        public Action? RegisterLateUpdateInitialize(Action act)  /**/ => _lateUpdateStart.Add(act);
-        /// <inheritdoc cref="SlotReusingActionList.Add(Action)"/>
-        public Action? RegisterLateUpdateEarly(Action act)       /**/ => _lateUpdateEarly.Add(act);
-        /// <inheritdoc cref="SlotReusingActionList.Add(Action)"/>
-        public Action? RegisterLateUpdate(Action act)            /**/ => _lateUpdateUsual.Add(act);
-        /// <inheritdoc cref="SlotReusingActionList.Add(Action)"/>
-        public Action? RegisterLateUpdateLate(Action act)        /**/ => _lateUpdateLater.Add(act);
-        /// <inheritdoc cref="SlotReusingActionList.Add(Action)"/>
-        public Action? RegisterLateUpdateFinalize(Action act)    /**/ => _lateUpdateFinal.Add(act);
 
+        /// <inheritdoc cref="UnorderedActionList.Remove(Action)"/>
+        public void RemoveFixedUpdateInitialize(Action act) /**/ => _fixedUpdateStart?.Remove(act);
+        /// <inheritdoc cref="UnorderedActionList.Remove(Action)"/>
+        public void RemoveFixedUpdateEarly(Action act)      /**/ => _fixedUpdateEarly?.Remove(act);
+        /// <inheritdoc cref="UnorderedActionList.Remove(Action)"/>
+        public void RemoveFixedUpdate(Action act)           /**/ => _fixedUpdateUsual?.Remove(act);
+        /// <inheritdoc cref="UnorderedActionList.Remove(Action)"/>
+        public void RemoveFixedUpdateLate(Action act)       /**/ => _fixedUpdateLater?.Remove(act);
+        /// <inheritdoc cref="UnorderedActionList.Remove(Action)"/>
+        public void RemoveFixedUpdateFinalize(Action act)   /**/ => _fixedUpdateFinal?.Remove(act);
+        /// <inheritdoc cref="UnorderedActionList.Remove(Action)"/>
+        public void RemoveUpdateInitialize(Action act)      /**/ => _updateStart?.Remove(act);
+        /// <inheritdoc cref="UnorderedActionList.Remove(Action)"/>
+        public void RemoveUpdateEarly(Action act)           /**/ => _updateEarly?.Remove(act);
+        /// <inheritdoc cref="UnorderedActionList.Remove(Action)"/>
+        public void RemoveUpdate(Action act)                /**/ => _updateUsual?.Remove(act);
+        /// <inheritdoc cref="UnorderedActionList.Remove(Action)"/>
+        public void RemoveUpdateLate(Action act)            /**/ => _updateLater?.Remove(act);
+        /// <inheritdoc cref="UnorderedActionList.Remove(Action)"/>
+        public void RemoveUpdateFinalize(Action act)        /**/ => _updateFinal?.Remove(act);
+        /// <inheritdoc cref="UnorderedActionList.Remove(Action)"/>
+        public void RemoveLateUpdateInitialize(Action act)  /**/ => _lateUpdateStart?.Remove(act);
+        /// <inheritdoc cref="UnorderedActionList.Remove(Action)"/>
+        public void RemoveLateUpdateEarly(Action act)       /**/ => _lateUpdateEarly?.Remove(act);
+        /// <inheritdoc cref="UnorderedActionList.Remove(Action)"/>
+        public void RemoveLateUpdate(Action act)            /**/ => _lateUpdateUsual?.Remove(act);
+        /// <inheritdoc cref="UnorderedActionList.Remove(Action)"/>
+        public void RemoveLateUpdateLate(Action act)        /**/ => _lateUpdateLater?.Remove(act);
+        /// <inheritdoc cref="UnorderedActionList.Remove(Action)"/>
+        public void RemoveLateUpdateFinalize(Action act)    /**/ => _lateUpdateFinal?.Remove(act);
 
-        /// <inheritdoc cref="SlotReusingActionList.Remove(Action)"/>
-        public void RemoveFixedUpdateInitialize(Action act) /**/ => _fixedUpdateStart.Remove(act);
-        /// <inheritdoc cref="SlotReusingActionList.Remove(Action)"/>
-        public void RemoveFixedUpdateEarly(Action act)      /**/ => _fixedUpdateEarly.Remove(act);
-        /// <inheritdoc cref="SlotReusingActionList.Remove(Action)"/>
-        public void RemoveFixedUpdate(Action act)           /**/ => _fixedUpdateUsual.Remove(act);
-        /// <inheritdoc cref="SlotReusingActionList.Remove(Action)"/>
-        public void RemoveFixedUpdateLate(Action act)       /**/ => _fixedUpdateLater.Remove(act);
-        /// <inheritdoc cref="SlotReusingActionList.Remove(Action)"/>
-        public void RemoveFixedUpdateFinalize(Action act)   /**/ => _fixedUpdateFinal.Remove(act);
-        /// <inheritdoc cref="SlotReusingActionList.Remove(Action)"/>
-        public void RemoveUpdateInitialize(Action act)      /**/ => _updateStart.Remove(act);
-        /// <inheritdoc cref="SlotReusingActionList.Remove(Action)"/>
-        public void RemoveUpdateEarly(Action act)           /**/ => _updateEarly.Remove(act);
-        /// <inheritdoc cref="SlotReusingActionList.Remove(Action)"/>
-        public void RemoveUpdate(Action act)                /**/ => _updateUsual.Remove(act);
-        /// <inheritdoc cref="SlotReusingActionList.Remove(Action)"/>
-        public void RemoveUpdateLate(Action act)            /**/ => _updateLater.Remove(act);
-        /// <inheritdoc cref="SlotReusingActionList.Remove(Action)"/>
-        public void RemoveUpdateFinalize(Action act)        /**/ => _updateFinal.Remove(act);
-        /// <inheritdoc cref="SlotReusingActionList.Remove(Action)"/>
-        public void RemoveLateUpdateInitialize(Action act)  /**/ => _lateUpdateStart.Remove(act);
-        /// <inheritdoc cref="SlotReusingActionList.Remove(Action)"/>
-        public void RemoveLateUpdateEarly(Action act)       /**/ => _lateUpdateEarly.Remove(act);
-        /// <inheritdoc cref="SlotReusingActionList.Remove(Action)"/>
-        public void RemoveLateUpdate(Action act)            /**/ => _lateUpdateUsual.Remove(act);
-        /// <inheritdoc cref="SlotReusingActionList.Remove(Action)"/>
-        public void RemoveLateUpdateLate(Action act)        /**/ => _lateUpdateLater.Remove(act);
-        /// <inheritdoc cref="SlotReusingActionList.Remove(Action)"/>
-        public void RemoveLateUpdateFinalize(Action act)    /**/ => _lateUpdateFinal.Remove(act);
-
-        /// <inheritdoc cref="SlotReusingActionList.GetActions"/>
-        public Action[] GetFixedUpdateInitialize()  /**/ => _fixedUpdateStart.GetActions()!;
-        /// <inheritdoc cref="SlotReusingActionList.GetActions"/>
-        public Action[] GetFixedUpdateEarly()       /**/ => _fixedUpdateEarly.GetActions()!;
-        /// <inheritdoc cref="SlotReusingActionList.GetActions"/>
-        public Action[] GetFixedUpdate()            /**/ => _fixedUpdateUsual.GetActions()!;
-        /// <inheritdoc cref="SlotReusingActionList.GetActions"/>
-        public Action[] GetFixedUpdateLate()        /**/ => _fixedUpdateLater.GetActions()!;
-        /// <inheritdoc cref="SlotReusingActionList.GetActions"/>
-        public Action[] GetFixedUpdateFinalize()    /**/ => _fixedUpdateFinal.GetActions()!;
-        /// <inheritdoc cref="SlotReusingActionList.GetActions"/>
-        public Action[] GetUpdateInitialize()       /**/ => _updateStart.GetActions()!;
-        /// <inheritdoc cref="SlotReusingActionList.GetActions"/>
-        public Action[] GetUpdateEarly()            /**/ => _updateEarly.GetActions()!;
-        /// <inheritdoc cref="SlotReusingActionList.GetActions"/>
-        public Action[] GetUpdate()                 /**/ => _updateUsual.GetActions()!;
-        /// <inheritdoc cref="SlotReusingActionList.GetActions"/>
-        public Action[] GetUpdateLate()             /**/ => _updateLater.GetActions()!;
-        /// <inheritdoc cref="SlotReusingActionList.GetActions"/>
-        public Action[] GetUpdateFinalize()         /**/ => _updateFinal.GetActions()!;
-        /// <inheritdoc cref="SlotReusingActionList.GetActions"/>
-        public Action[] GetLateUpdateInitialize()   /**/ => _lateUpdateStart.GetActions()!;
-        /// <inheritdoc cref="SlotReusingActionList.GetActions"/>
-        public Action[] GetLateUpdateEarly()        /**/ => _lateUpdateEarly.GetActions()!;
-        /// <inheritdoc cref="SlotReusingActionList.GetActions"/>
-        public Action[] GetLateUpdate()             /**/ => _lateUpdateUsual.GetActions()!;
-        /// <inheritdoc cref="SlotReusingActionList.GetActions"/>
-        public Action[] GetLateUpdateLate()         /**/ => _lateUpdateLater.GetActions()!;
-        /// <inheritdoc cref="SlotReusingActionList.GetActions"/>
-        public Action[] GetLateUpdateFinalize()     /**/ => _lateUpdateFinal.GetActions()!;
+        /// <inheritdoc cref="UnorderedActionList.GetActions"/>
+        public Action[] GetFixedUpdateInitialize()  /**/ => _fixedUpdateStart?.GetActions() ?? Array.Empty<Action>();
+        /// <inheritdoc cref="UnorderedActionList.GetActions"/>
+        public Action[] GetFixedUpdateEarly()       /**/ => _fixedUpdateEarly?.GetActions() ?? Array.Empty<Action>();
+        /// <inheritdoc cref="UnorderedActionList.GetActions"/>
+        public Action[] GetFixedUpdate()            /**/ => _fixedUpdateUsual?.GetActions() ?? Array.Empty<Action>();
+        /// <inheritdoc cref="UnorderedActionList.GetActions"/>
+        public Action[] GetFixedUpdateLate()        /**/ => _fixedUpdateLater?.GetActions() ?? Array.Empty<Action>();
+        /// <inheritdoc cref="UnorderedActionList.GetActions"/>
+        public Action[] GetFixedUpdateFinalize()    /**/ => _fixedUpdateFinal?.GetActions() ?? Array.Empty<Action>();
+        /// <inheritdoc cref="UnorderedActionList.GetActions"/>
+        public Action[] GetUpdateInitialize()       /**/ => _updateStart?.GetActions() ?? Array.Empty<Action>();
+        /// <inheritdoc cref="UnorderedActionList.GetActions"/>
+        public Action[] GetUpdateEarly()            /**/ => _updateEarly?.GetActions() ?? Array.Empty<Action>();
+        /// <inheritdoc cref="UnorderedActionList.GetActions"/>
+        public Action[] GetUpdate()                 /**/ => _updateUsual?.GetActions() ?? Array.Empty<Action>();
+        /// <inheritdoc cref="UnorderedActionList.GetActions"/>
+        public Action[] GetUpdateLate()             /**/ => _updateLater?.GetActions() ?? Array.Empty<Action>();
+        /// <inheritdoc cref="UnorderedActionList.GetActions"/>
+        public Action[] GetUpdateFinalize()         /**/ => _updateFinal?.GetActions() ?? Array.Empty<Action>();
+        /// <inheritdoc cref="UnorderedActionList.GetActions"/>
+        public Action[] GetLateUpdateInitialize()   /**/ => _lateUpdateStart?.GetActions() ?? Array.Empty<Action>();
+        /// <inheritdoc cref="UnorderedActionList.GetActions"/>
+        public Action[] GetLateUpdateEarly()        /**/ => _lateUpdateEarly?.GetActions() ?? Array.Empty<Action>();
+        /// <inheritdoc cref="UnorderedActionList.GetActions"/>
+        public Action[] GetLateUpdate()             /**/ => _lateUpdateUsual?.GetActions() ?? Array.Empty<Action>();
+        /// <inheritdoc cref="UnorderedActionList.GetActions"/>
+        public Action[] GetLateUpdateLate()         /**/ => _lateUpdateLater?.GetActions() ?? Array.Empty<Action>();
+        /// <inheritdoc cref="UnorderedActionList.GetActions"/>
+        public Action[] GetLateUpdateFinalize()     /**/ => _lateUpdateFinal?.GetActions() ?? Array.Empty<Action>();
 
 
         /*  unregister by cancellation token  ================================================================ */
 
-        readonly static Action<object> UnregisterByCancellationToken = obj =>
+        readonly protected static Action<object> UnregisterByCancellationToken = obj =>
         {
             if (obj is Ticket ticket)
             {
@@ -437,11 +402,12 @@ namespace SatorImaging.LifecycleManager
             }
         };
 
-        sealed class Ticket //: IDisposable
+        // don't define struct. it will be boxed into object anyway
+        protected sealed class Ticket //: IDisposable
         {
             readonly Action action;
-            readonly SlotReusingActionList list;
-            public Ticket(Action action, SlotReusingActionList list)
+            readonly UnorderedActionList list;
+            public Ticket(Action action, UnorderedActionList list)
             {
                 this.action = action;
                 this.list = list;
@@ -453,268 +419,316 @@ namespace SatorImaging.LifecycleManager
             }
         }
 
-        /// <summary>Unregister action when token is canceled.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void Register(Action act, CancellationToken token, SlotReusingActionList list)
-        {
-            list.Add(act);
-            token.Register(UnregisterByCancellationToken, new Ticket(act, list));
-        }
 
-        /// <inheritdoc cref="Register(Action, CancellationToken, SlotReusingActionList)"/>
-        public void RegisterFixedUpdateInitialize(Action act, CancellationToken ct)  /**/ => Register(act, ct, _fixedUpdateStart);
-        /// <inheritdoc cref="Register(Action, CancellationToken, SlotReusingActionList)"/>
-        public void RegisterFixedUpdateEarly(Action act, CancellationToken ct)       /**/ => Register(act, ct, _fixedUpdateEarly);
-        /// <inheritdoc cref="Register(Action, CancellationToken, SlotReusingActionList)"/>
-        public void RegisterFixedUpdate(Action act, CancellationToken ct)            /**/ => Register(act, ct, _fixedUpdateUsual);
-        /// <inheritdoc cref="Register(Action, CancellationToken, SlotReusingActionList)"/>
-        public void RegisterFixedUpdateLate(Action act, CancellationToken ct)        /**/ => Register(act, ct, _fixedUpdateLater);
-        /// <inheritdoc cref="Register(Action, CancellationToken, SlotReusingActionList)"/>
-        public void RegisterFixedUpdateFinalize(Action act, CancellationToken ct)    /**/ => Register(act, ct, _fixedUpdateFinal);
-        /// <inheritdoc cref="Register(Action, CancellationToken, SlotReusingActionList)"/>
-        public void RegisterUpdateInitialize(Action act, CancellationToken ct)       /**/ => Register(act, ct, _updateStart);
-        /// <inheritdoc cref="Register(Action, CancellationToken, SlotReusingActionList)"/>
-        public void RegisterUpdateEarly(Action act, CancellationToken ct)            /**/ => Register(act, ct, _updateEarly);
-        /// <inheritdoc cref="Register(Action, CancellationToken, SlotReusingActionList)"/>
-        public void RegisterUpdate(Action act, CancellationToken ct)                 /**/ => Register(act, ct, _updateUsual);
-        /// <inheritdoc cref="Register(Action, CancellationToken, SlotReusingActionList)"/>
-        public void RegisterUpdateLate(Action act, CancellationToken ct)             /**/ => Register(act, ct, _updateLater);
-        /// <inheritdoc cref="Register(Action, CancellationToken, SlotReusingActionList)"/>
-        public void RegisterUpdateFinalize(Action act, CancellationToken ct)         /**/ => Register(act, ct, _updateFinal);
-        /// <inheritdoc cref="Register(Action, CancellationToken, SlotReusingActionList)"/>
-        public void RegisterLateUpdateInitialize(Action act, CancellationToken ct)   /**/ => Register(act, ct, _lateUpdateStart);
-        /// <inheritdoc cref="Register(Action, CancellationToken, SlotReusingActionList)"/>
-        public void RegisterLateUpdateEarly(Action act, CancellationToken ct)        /**/ => Register(act, ct, _lateUpdateEarly);
-        /// <inheritdoc cref="Register(Action, CancellationToken, SlotReusingActionList)"/>
-        public void RegisterLateUpdate(Action act, CancellationToken ct)             /**/ => Register(act, ct, _lateUpdateUsual);
-        /// <inheritdoc cref="Register(Action, CancellationToken, SlotReusingActionList)"/>
-        public void RegisterLateUpdateLate(Action act, CancellationToken ct)         /**/ => Register(act, ct, _lateUpdateLater);
-        /// <inheritdoc cref="Register(Action, CancellationToken, SlotReusingActionList)"/>
-        public void RegisterLateUpdateFinalize(Action act, CancellationToken ct)     /**/ => Register(act, ct, _lateUpdateFinal);
-
-    }
-
-
-    /// <summary>
-    /// [NOT Thread-Safe]
-    /// </summary>
-    /// <remarks>Item order will be changed when remove item from list.</remarks>
-    public sealed class SlotReusingActionList
-    {
-        public const int INITIAL_CAPACITY = 1;
-        /// <summary>Capacity expanded exponentially until reaches this value. (when 8 -> 1, 2, 4, 8, 16, 24, 32, 40)</summary>
-        public const int MAX_CAPACITY_EXPANSION = 32;
-
-        int _consumed = 0;
-        Action?[]? _array;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Clear()
-        {
-            _consumed = 0;
-            _array = null;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void EnsureCapacity()
-        {
-            if (_array == null)
-            {
-                _array = new Action[INITIAL_CAPACITY];
-                return;
-            }
-            else if (_array.Length > _consumed)
-            {
-                return;
-            }
-
-            Array.Resize(ref _array, _array.Length + Math.Min(_array.Length, MAX_CAPACITY_EXPANSION));
-        }
-
-
+        /// <inheritdoc cref="UnorderedActionList.Add(Action)"/>
         /// <summary>
-        /// Do nothing when null action specified.
+        /// If action is depending on instance that will be destroyed with cancellation token, You have to specify
+        /// same token to unregister action together. If not, action will cause error due to depending instance is gone.
         /// </summary>
-        /// <returns>
-        /// Returns received action instance as-is. It is null when null is passed.
-        /// <para>
-        /// > [!NOTE]
-        /// > `Add(instance.Method)` will create new Action instance call by call implicitly.
-        /// > If try to remove action later, it requires to specify exactly same instance so need to keep returned instance.
-        /// </para>
-        /// </returns>
-        public Action? Add(Action act)
+        /// <param name="ct">
+        /// Token to unregister specified action when canceled.
+        /// If you don't require action to be unregistered, use `CancellationToken.None` or leave unspecified.
+        /// </param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected Action? Register(Action act, CancellationToken ct, UnorderedActionList list)
         {
             if (act == null)
                 return null;
 
-            EnsureCapacity();
+            list.Add(act);
 
-            _array![_consumed] = act;
-            _consumed++;
+            // NOTE: CanBeCanceled is not set on both `default(CancellationToken)` and `CancellationToken.None`
+            //       ie. won't be unregistered
+            if (ct.CanBeCanceled)
+            {
+                // canceled CancellationTokenSource.Token has both CanBeCanceled and IsCancellationRequested are set.
+                // this callback will run immediately when canceled CTS.Token is specified.
+                ct.Register(UnregisterByCancellationToken, new Ticket(act, list));
+            }
+
             return act;
         }
 
-        /// <summary>
-        /// Do nothing when null action specified.
-        /// <para>
-        /// > [!WARNING]
-        /// > Item order will be changed. See file header document for details.
-        /// </para>
-        /// </summary>
-        public void Remove(Action act)
+
+        // to avoid use of ref method parameter, list must be allocated on call even when action is null
+        // okay no internal array is allocated when list instantiated
+        /// <inheritdoc cref="Register(Action, CancellationToken, UnorderedActionList)"/>
+        public Action? RegisterFixedUpdateInitialize(Action act, CancellationToken ct = default)  /**/ => Register(act, ct, _fixedUpdateStart ??= new());
+        /// <inheritdoc cref="Register(Action, CancellationToken, UnorderedActionList)"/>
+        public Action? RegisterFixedUpdateEarly(Action act, CancellationToken ct = default)       /**/ => Register(act, ct, _fixedUpdateEarly ??= new());
+        /// <inheritdoc cref="Register(Action, CancellationToken, UnorderedActionList)"/>
+        public Action? RegisterFixedUpdate(Action act, CancellationToken ct = default)            /**/ => Register(act, ct, _fixedUpdateUsual ??= new());
+        /// <inheritdoc cref="Register(Action, CancellationToken, UnorderedActionList)"/>
+        public Action? RegisterFixedUpdateLate(Action act, CancellationToken ct = default)        /**/ => Register(act, ct, _fixedUpdateLater ??= new());
+        /// <inheritdoc cref="Register(Action, CancellationToken, UnorderedActionList)"/>
+        public Action? RegisterFixedUpdateFinalize(Action act, CancellationToken ct = default)    /**/ => Register(act, ct, _fixedUpdateFinal ??= new());
+        /// <inheritdoc cref="Register(Action, CancellationToken, UnorderedActionList)"/>
+        public Action? RegisterUpdateInitialize(Action act, CancellationToken ct = default)       /**/ => Register(act, ct, _updateStart ??= new());
+        /// <inheritdoc cref="Register(Action, CancellationToken, UnorderedActionList)"/>
+        public Action? RegisterUpdateEarly(Action act, CancellationToken ct = default)            /**/ => Register(act, ct, _updateEarly ??= new());
+        /// <inheritdoc cref="Register(Action, CancellationToken, UnorderedActionList)"/>
+        public Action? RegisterUpdate(Action act, CancellationToken ct = default)                 /**/ => Register(act, ct, _updateUsual ??= new());
+        /// <inheritdoc cref="Register(Action, CancellationToken, UnorderedActionList)"/>
+        public Action? RegisterUpdateLate(Action act, CancellationToken ct = default)             /**/ => Register(act, ct, _updateLater ??= new());
+        /// <inheritdoc cref="Register(Action, CancellationToken, UnorderedActionList)"/>
+        public Action? RegisterUpdateFinalize(Action act, CancellationToken ct = default)         /**/ => Register(act, ct, _updateFinal ??= new());
+        /// <inheritdoc cref="Register(Action, CancellationToken, UnorderedActionList)"/>
+        public Action? RegisterLateUpdateInitialize(Action act, CancellationToken ct = default)   /**/ => Register(act, ct, _lateUpdateStart ??= new());
+        /// <inheritdoc cref="Register(Action, CancellationToken, UnorderedActionList)"/>
+        public Action? RegisterLateUpdateEarly(Action act, CancellationToken ct = default)        /**/ => Register(act, ct, _lateUpdateEarly ??= new());
+        /// <inheritdoc cref="Register(Action, CancellationToken, UnorderedActionList)"/>
+        public Action? RegisterLateUpdate(Action act, CancellationToken ct = default)             /**/ => Register(act, ct, _lateUpdateUsual ??= new());
+        /// <inheritdoc cref="Register(Action, CancellationToken, UnorderedActionList)"/>
+        public Action? RegisterLateUpdateLate(Action act, CancellationToken ct = default)         /**/ => Register(act, ct, _lateUpdateLater ??= new());
+        /// <inheritdoc cref="Register(Action, CancellationToken, UnorderedActionList)"/>
+        public Action? RegisterLateUpdateFinalize(Action act, CancellationToken ct = default)     /**/ => Register(act, ct, _lateUpdateFinal ??= new());
+
+
+        // NOTE: MUST keep this class non-public. null checking must be done by caller to avoid double-check.
+        //       ie. action list could have null entry if consumer doesn't care.
+        /// <remarks>
+        /// [NOT Thread-Safe]
+        /// Item order will be changed when remove item from list.
+        /// </remarks>
+        protected sealed class UnorderedActionList
         {
-            if (_array == null || act == null)
-                return;
+            public const int INITIAL_CAPACITY = 1;
+            /// <summary>Capacity expanded exponentially until reaches this value. (when 8 -> 1, 2, 4, 8, 16, 24, 32, 40)</summary>
+            public const int MAX_CAPACITY_EXPANSION = 32;
 
-            for (int i = 0; i < _consumed; i++)
+            int _consumed = 0;
+            Action?[]? _array;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Clear()
             {
-                if (_array[i] == act)
+                _consumed = 0;
+                _array = null;
+            }
+
+
+            /// <remarks>
+            /// Do nothing when null action specified.
+            /// </remarks>
+            /// <returns>
+            /// Returns received action instance as-is. It is null when null is passed.
+            /// <para>
+            /// > [!NOTE]
+            /// > `Add(instance.Method)` will create new Action instance call by call implicitly.
+            /// > If try to remove action later, it requires to specify exactly same instance so need to keep returned instance.
+            /// </para>
+            /// </returns>
+            public Action Add(Action act)
+            {
+                // NOTE: check is done in caller, don't check here.
+                //if (act == null)
+                //    return null;
+
+                if (_array == null)
                 {
-                    _array[i] = null;
+                    _array = new Action[INITIAL_CAPACITY];
+                }
+                else if (_array.Length <= _consumed)
+                {
+                    Array.Resize(ref _array, _array.Length + Math.Min(_array.Length, MAX_CAPACITY_EXPANSION));
+                }
 
-                    var lastIndex = _consumed - 1;
-                    if (i != lastIndex)
-                    {
-                        _array[i] = _array[lastIndex];
-                        _array[lastIndex] = null;
-                    }
+                _array[_consumed] = act;
+                _consumed++;
+                return act;
+            }
 
-                    _consumed--;
+            /// <remarks>
+            /// Do nothing when null action specified.
+            /// <para>
+            /// > [!WARNING]
+            /// > Item order will be changed. See file header document for details.
+            /// </para>
+            /// </remarks>
+            public void Remove(Action act)
+            {
+                if (act == null)
                     return;
+
+                var span = GetSpanOrEmpty();
+                for (int i = 0; i < span.Length; i++)
+                {
+                    if (span[i] == act)
+                    {
+                        span[i] = null;
+
+                        var lastIndex = _consumed - 1;
+                        if (i != lastIndex)
+                        {
+                            span[i] = span[lastIndex];
+                            span[lastIndex] = null;
+                        }
+
+                        _consumed--;
+                        return;
+                    }
+                }
+
+                return;
+            }
+
+
+            /// <summary>Invoke registered actions.</summary>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Invoke()
+            {
+                var span = GetSpanOrEmpty();
+                for (int i = 0; i < span.Length; i++)
+                {
+                    // not null, checked on add/remove
+                    span[i]!.Invoke();
                 }
             }
 
-            return;
+
+            /// <returns>Copy of internal array. Empty when internal array haven't yet allocated.</returns>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public Action[] GetActions() => GetSpanOrEmpty().ToArray() as Action[];
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            Span<Action?> GetSpanOrEmpty() => _array == null ? Span<Action?>.Empty : _array.AsSpan(0, _consumed);
+
         }
-
-
-        /// <summary>Invoke registered actions.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Invoke()
-        {
-            if (_array == null)
-                return;
-
-            for (int i = 0; i < _consumed; i++)
-            {
-                // not null, checked on add/remove
-                _array[i]!.Invoke();
-            }
-        }
-
-        /// <returns>Copy of internal array. Empty when internal array haven't yet allocated.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Action?[] GetActions() => _consumed == 0 ? Array.Empty<Action>() : _array.AsSpan(0, _consumed).ToArray();
 
     }
 
 
     /// <summary>
-    /// Lifecycle per scene.
-    /// Scene Lifecycle can be lifetime owner of other lifecycle but is restricted from being bound to token or other lifecycle.
+    /// Represents unity scene lifetime.
     /// </summary>
-    public sealed class SceneLifecycle : LifecycleBehaviour
+    public sealed class SceneLifetime : IEquatable<SceneLifetime>  // NOTE: don't implement IDisposable!
+                                                                   //       it will allow scene lifetime to be bound to other!!
     {
-        // TODO: override OnDestroy here!!
+        const string LOG_PREFIX = "[" + nameof(SceneLifetime) + "] ";
+
+        readonly string _sceneInfo;
+        internal SceneLifetime(Scene scene)
+        {
+            if (_sceneToLifetime.ContainsKey(scene))
+            {
+                throw new InvalidOperationException(
+                    LOG_PREFIX + "scene lifetime has already been created. use `Get` method instead: " + scene);
+            }
+
+            if (!scene.IsValid())
+                throw new NotSupportedException(LOG_PREFIX + "scene is invalid: " + scene);
+
+
+
+            _sceneInfo = "BuildIdx:" + scene.buildIndex + " " + scene.name;
+            _sceneToLifetime.Add(scene, this);
+        }
+
+
+        public override string ToString() => _sceneInfo;
+        public bool Equals(SceneLifetime? other) => other is SceneLifetime sl && ReferenceEquals(this, sl);
+
+
+        private CancellationTokenSource? _tokenSource;
+        public CancellationToken Token => (_tokenSource ??= new()).Token;
+
+        void CancelToken() => _tokenSource?.Cancel();
 
 
         /*  static helpers  ================================================================ */
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSplashScreen)]
-        internal static void SceneLifecycleInitializer()
+        internal static void SceneLifetimeInitializer()
         {
             SceneManager.sceneUnloaded += (scene) =>
             {
 #if UNITY_EDITOR
-                Debug.Log(nameof(SceneLifecycle) + " [sceneUnloaded event] isLoaded: " + scene.isLoaded
+                Debug.Log(LOG_PREFIX + "[sceneUnloaded event] isLoaded:" + scene.isLoaded
                     + " / root objects: " + scene.GetRootGameObjects().Length + "\n> "
                     + string.Join("\n> ", scene.GetRootGameObjects().Select(x => x.ToString())) + "\n");
-                Debug.LogWarning(nameof(SceneLifecycle) + ": " + DumpSceneLifecycleCacheInfo() + "\n");
+                UnityEditor.EditorApplication.delayCall += () =>
+                {
+                    if (_sceneToLifetime.Count > 0)
+                        Debug.LogWarning(LOG_PREFIX + DumpDatabaseInfo() + "\n");
+                    else
+                        Debug.Log(LOG_PREFIX + "no scene lifetime in database");
+                };
 #endif
 
-                if (_sceneToLifecycle.ContainsKey(scene))
+                if (_sceneToLifetime.ContainsKey(scene))
                 {
-                    var lifecycle = _sceneToLifecycle[scene];
-                    if (lifecycle != null)
-                    {
-#if UNITY_EDITOR
-                        if (UnityEditor.EditorApplication.isPlaying)
-#endif
-                            UnityEngine.Object.Destroy(lifecycle);
-                    }
-
-                    _sceneToLifecycle.Remove(scene);
+                    var lifetime = _sceneToLifetime[scene];
+                    lifetime.CancelToken();
+                    _sceneToLifetime.Remove(scene);
                 }
 
-                // check
-                foreach (var check in _sceneToLifecycle.Values.ToArray())
-                {
-                    if (check == null)
-                    {
-                        throw new Exception(nameof(SceneLifecycle) + " [null entry found] " + DumpSceneLifecycleCacheInfo());
-                    }
-                }
+                // validate
+                ThrowIfCacheIsInvalid();
             };
         }
 
 
-        readonly static Dictionary<Scene, SceneLifecycle> _sceneToLifecycle = new();
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static string DumpSceneLifecycleCacheInfo()
+        // call this method on each helper calls
+        static void ThrowIfCacheIsInvalid()
         {
-            return "scene lifecycles: " + _sceneToLifecycle.Count + "\n> " + string.Join("\n> ", _sceneToLifecycle);
-        }
-
-
-        /// <remarks>
-        /// > [!NOTE]
-        /// > This method just remove instance from cache. You have responsibility on canceling token.
-        /// </remarks>
-        internal static void RemoveFromCache(SceneLifecycle lifecycle)
-        {
-            // dictionary has array inside, iterate through that first.
-            if (!_sceneToLifecycle.ContainsValue(lifecycle))
-                return;
-
-            Scene found = default;
-            foreach (var scene_lifecycle in _sceneToLifecycle)
+            foreach (var scene in _sceneToLifetime.Keys)
             {
-                if (scene_lifecycle.Value == lifecycle)
+                if (!scene.IsValid())
                 {
-                    found = scene_lifecycle.Key;
-                    break;
+                    throw new Exception(LOG_PREFIX + "database contains invalid scene: " + DumpDatabaseInfo());
                 }
             }
-            _sceneToLifecycle.Remove(found);
         }
 
 
-        /// <summary>Get lifecycle of active scene.</summary>
-        /// <returns>null when scene is invalid or unloaded.</returns>
-        public static SceneLifecycle? Get() => Get(SceneManager.GetActiveScene());
+        readonly static Dictionary<Scene, SceneLifetime> _sceneToLifetime = new();
 
-        /// <summary>Get lifecycle of specified scene.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static string DumpDatabaseInfo()
+        {
+            return "scene lifetime database: " + _sceneToLifetime.Count + "\n> " + string.Join("\n> ", _sceneToLifetime
+                .Select(x => $"{x.Key.name} (valid/loaded:{x.Key.IsValid()}/{x.Key.isLoaded}) -> {x.Value}"));
+        }
+
+
+        /// <summary>Get lifetime of active scene.</summary>
+        /// <returns>null when scene is invalid or unloaded.</returns>
+        public static SceneLifetime Get() => Get(SceneManager.GetActiveScene());
+
+        /// <summary>Get lifetime of specified scene.</summary>
         /// <param name="scene">`gameObject.scene` or `SceneManager.Get...` or something.</param>
         /// <inheritdoc cref="Get()"/>
-        public static SceneLifecycle? Get(Scene scene)
+        public static SceneLifetime Get(Scene scene)
         {
-            if (!scene.IsValid() || !scene.isLoaded)
-            {
-                Debug.LogError(nameof(SceneLifecycle) + ": scene is invalid or unloaded: " + scene);
-                return null;
-            }
+            ThrowIfCacheIsInvalid();
 
-            if (_sceneToLifecycle.ContainsKey(scene))
-                return _sceneToLifecycle[scene];
+            if (_sceneToLifetime.ContainsKey(scene))
+                return _sceneToLifetime[scene];
 
-            var lifecycle = new GameObject(
-                nameof(SceneLifecycle) + " for ID:" + scene.buildIndex + " Name:" + scene.name).AddComponent<SceneLifecycle>();
-            lifecycle.IsSceneLifecycle = true;
+            return new SceneLifetime(scene);
+        }
 
-            _sceneToLifecycle.Add(scene, lifecycle);
-            return lifecycle;
+    }
+
+
+    /// <summary>
+    /// Scene-bound lifecycle factory.
+    /// </summary>
+    public static class SceneLifecycle
+    {
+        /// <summary>Get scene-bound lifecycle of active scene.</summary>
+        /// <inheritdoc cref="Get(Scene)"/>
+        public static LifecycleBehaviour Get() => Get(SceneManager.GetActiveScene());
+
+        /// <summary>Get scene-bound lifecycle of specified scene.</summary>
+        /// <returns>Lifecycle and its GameObject will be destroyed automatically on sceneUnloaded event.</returns>
+        public static LifecycleBehaviour Get(Scene scene)
+        {
+            var lifetime = SceneLifetime.Get(scene);
+            var result = LifecycleBehaviour.Create(nameof(SceneLifecycle) + lifetime.ToString(), true);
+
+            result.gameObject.DestroyWith(lifetime.Token);
+            return result;
         }
 
     }
@@ -725,164 +739,224 @@ namespace SatorImaging.LifecycleManager
     /// </summary>
     public static class LifetimeExtensions
     {
-        /// <summary>Invoked before object bound to token.</summary>
-        public static Action<object, CancellationToken, CancellationTokenRegistration>? DebuggerAction
+        const string LOG_PREFIX = "[" + nameof(LifetimeExtensions) + "] ";
+
+        /// <summary>
+        /// Arguments: (obj, token, ticket, ownerOrNull)
+        /// <para>
+        /// Invoked before object bound to token.
+        /// </para>
+        /// </summary>
+        public static Action<object, CancellationToken, CancellationTokenRegistration, object?>? DebuggerAction
 #if UNITY_EDITOR
-            = (obj, token, ticket) => Tests.LifecycleBehaviourTests._ticketToTarget.Add(new(ticket), new(obj))
+            = (obj, token, ticket, ownerOrNull) =>
+            {
+                // could be UnityEngine.Object, don't use `??`
+                var ownerOrTicket = ownerOrNull != null ? ownerOrNull : ticket;
+                Tests.LifecycleBehaviourTests._ticketOrOwnerToTarget.Add(new(ownerOrTicket), new(obj));
+                Debug.Log(LOG_PREFIX + $"Lifetime bound (obj->owner): {obj}  -->  {ownerOrTicket}");
+            }
 #endif
             ;
 
 
-        /// <summary>To avoid allocation when register action to cancellation token.</summary>
-        readonly public static Action<object> DisposerAction = obj =>
+        /*  deep destroy  ================================================================ */
+
+        const int LAYER_DEFAULT = 0;
+        const string TAG_DEFAULT = "Untagged";
+        const string NAME_PREFIX = "__LIFECYCLE_GONE__";
+
+        /// <summary>
+        /// As of actual object deletion is happened at the end of frame, GameObject.Find(),
+        /// GameObject.FindWithTag() or other Unity native functions unexpectedly retrieve
+        /// destroyed objects. thus need to "hide" destroyed object from those functions.
+        /// </summary>
+        internal static void DeepDestroy_NoCheck(UnityEngine.Object obj)
         {
-            if (obj is UnityEngine.Object unityObj)  // Transform check is done already. don't check here
+            // NOTE: already checked
+            //if (obj == null || obj is Transform)
+            //{
+            //    return;
+            //}
+
+            // component.name will change gameObject.name. ignore it.
+            if (obj is not Component)
             {
+                // 1) must be unique due to obj.name may be used as dictionary key
+                // 2) empty or short string causes problem when slicing or something w/o bounds check
+                obj.name = NAME_PREFIX + obj.GetHashCode();
+            }
+
+            if (obj is GameObject go)
+            {
+                go.SetActive(false);
+                // to hide from GetComponentsInChildren<T>(true)
+                go.transform.SetParent(null, false);
+                go.tag = TAG_DEFAULT;
+                go.layer = LAYER_DEFAULT;
+                //go.hideFlags = ;
+            }
+
 #if UNITY_EDITOR
-                if (UnityEditor.EditorApplication.isPlaying)
+            if (Application.IsPlaying(obj))
 #endif
-                    UnityEngine.Object.Destroy(unityObj);
-            }
-            else if (obj is IDisposable disposable)
-            {
-                disposable.Dispose();
-            }
-            else
-            {
-                Debug.LogError(nameof(LifetimeExtensions) + ": unsupported type: " + obj);
-            }
-        };
+                UnityEngine.Object.Destroy(obj);
+        }
 
 
         /*  extension methods  ================================================================ */
 
+        /// <summary>To avoid allocation when register action to cancellation token.</summary>
+        readonly static Action<object> DisposerAction = obj =>
+        {
+            // NOTE: when object is bound to multiple tokens, it could be null
+            if (obj == null)
+                return;
+
+            // mono behaviour might implement IDisposable. super ultra rare case.
+            (obj as IDisposable)?.Dispose();
+
+            // IDisposable just disposes, UnityEngine.Object (managed shell) may still exist.
+            if (obj is UnityEngine.Object unityObj && unityObj != null)  // Transform check is done already. don't check here
+            {
+                DeepDestroy_NoCheck(unityObj);
+            }
+        };
+
+
         const string ERROR_TFORM = "UnityEngine.Transform is not supported to be disposed.";
-        const string ERROR_SCENE = "SceneLifecycle is restricted from being bound.";
-        const string WARN_COMP = "Are you sure? Did you consider bind GameObject instead? Binding UnityEngine.Component lifetime to other could make things complex!!";
+        const string WARN_UNITY_OBJ = "Are you sure? Did you consider bind GameObject instead? Binding UnityEngine.Object lifetime to other could make things complex!!";
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static IDisposable BindToToken(object obj, CancellationToken token)
+        static IDisposable BindToToken(object obj, CancellationToken token, object? ownerOrNull)
         {
             if (obj == null)
                 throw new NullReferenceException(nameof(obj));
 
             var ticket = token.Register(DisposerAction, obj);
-            DebuggerAction?.Invoke(obj, token, ticket);
+            DebuggerAction?.Invoke(obj, token, ticket, ownerOrNull);
             return ticket;
         }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void ThrowIfInvalidOperationAndThenPrepareObject(UnityEngine.Object obj, Component? owner)
+        static bool HasntMarkedAsDontDestroyOnLoad(GameObject go)  // !HasMarkedAsDont... vs HasntMarkedAsDont...
+        {
+            var scene = go.scene;
+            return scene.buildIndex != -1 || scene.path != scene.name || scene.name != nameof(UnityEngine.Object.DontDestroyOnLoad);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void ThrowIfInvalidOperationThenPrepareObject(UnityEngine.Object obj, Component? owner)
         {
             if (obj is Transform)
-                throw new NotSupportedException(nameof(LifetimeExtensions) + ": " + ERROR_TFORM);
+                throw new NotSupportedException(LOG_PREFIX + ERROR_TFORM);
 
             var go = obj as GameObject;
-            var comp = obj as Component;
-
-            // check upcasted instance and components
-            if (obj is SceneLifecycle
-            || (obj is LifecycleBehaviour lifecycle && lifecycle.IsSceneLifecycle)
-            || (go != null && go.TryGetComponent(out LifecycleBehaviour goLC) && goLC.IsSceneLifecycle)
-            || (comp != null && comp.gameObject.TryGetComponent(out LifecycleBehaviour compLC) && compLC.IsSceneLifecycle)
-            )
-                throw new InvalidOperationException(nameof(LifetimeExtensions) + ": " + ERROR_SCENE);
-
             if (owner != null)
             {
-                var ownerScene = owner.gameObject.scene;
-                if (ownerScene.buildIndex != -1 || ownerScene.path != ownerScene.name || ownerScene.name != nameof(UnityEngine.Object.DontDestroyOnLoad))
+                if (HasntMarkedAsDontDestroyOnLoad(owner.gameObject))
                 {
-                    if ((go != null && go.scene != ownerScene)
-                    || (comp != null && comp.gameObject.scene != ownerScene))
+                    var comp = obj as Component;
+                    var ownerScene = owner.gameObject.scene;
+
+                    // disallow binding when both obj and owner are NOT marked as DontDestroyOnLoad
+                    if ((go != null && go.scene != ownerScene && HasntMarkedAsDontDestroyOnLoad(go))
+                    || (comp != null && comp.gameObject.scene != ownerScene && HasntMarkedAsDontDestroyOnLoad(comp.gameObject))
+                    )
                     {
-                        throw new InvalidOperationException(nameof(LifetimeExtensions)
-                            + ": inter-scene binding is restricted. use cancellation token overload if you understand and accept side effects.");
+                        throw new InvalidOperationException(LOG_PREFIX
+                            + "inter-scene binding is restricted. use cancellation token overload if you understand and accept side effects.");
                     }
                 }
             }
 
-            // NOTE: to promise order of destroy, need to mark GameObject as DontDestroyOnLoad
-#if false == LIFECYCLE_DISABLE_STABLE_DESTROY_ORDER
+            // NOTE: to promise order of destruction, need to mark GameObject as DontDestroyOnLoad
             if (go != null)
             {
                 UnityEngine.Object.DontDestroyOnLoad(go);
             }
-#endif
         }
 
 
         //IDisposable
         /// <summary>Bind disposable lifetime to cancellation token.</summary>
-        public static IDisposable DestroyWith(this IDisposable obj, CancellationToken token) => BindToToken(obj, token);
+        public static IDisposable DestroyWith(this IDisposable obj, CancellationToken token) => BindToToken(obj, token, null);
+        /// <summary>Bind disposable lifetime to unity scene.</summary>
+        public static IDisposable DestroyWith(this IDisposable obj, SceneLifetime scene) => BindToToken(obj, scene.Token, scene);
         /// <summary>Bind disposable lifetime to lifecycle owner.</summary>
-        public static IDisposable DestroyWith(this IDisposable obj, LifecycleBehaviour owner) => BindToToken(obj, owner.destroyCancellationToken);
+        public static IDisposable DestroyWith(this IDisposable obj, LifecycleBehaviour owner) => BindToToken(obj, owner.destroyCancellationToken, owner);
 #if UNITY_2022_2_OR_NEWER
         /// <summary>Bind disposable lifetime to MonoBehaviour.</summary>
-        public static IDisposable DestroyWith(this IDisposable obj, MonoBehaviour mono) => BindToToken(obj, mono.destroyCancellationToken);
+        public static IDisposable DestroyWith(this IDisposable obj, MonoBehaviour mono) => BindToToken(obj, mono.destroyCancellationToken, mono);
 #endif
 
 
-        //UnityEngine.Object
-        /// <summary>Bind unity object lifetime to cancellation token.</summary>
-        public static IDisposable DestroyWith(this UnityEngine.Object obj, CancellationToken token)
+        /* =      UnityEngine.Object      = */
+
+        static IDisposable BindUnityObjectToToken(UnityEngine.Object obj, CancellationToken token)
         {
-            ThrowIfInvalidOperationAndThenPrepareObject(obj, null);
-            return BindToToken(obj, token);
+            ThrowIfInvalidOperationThenPrepareObject(obj, null);
+            return BindToToken(obj, token, null);
         }
 
-        /// <summary>Bind unity object lifetime to lifecycle owner.</summary>
-        public static IDisposable DestroyWith(this UnityEngine.Object obj, LifecycleBehaviour owner)
+        static IDisposable BindUnityObjectToToken(UnityEngine.Object obj, SceneLifetime scene)
         {
-            ThrowIfInvalidOperationAndThenPrepareObject(obj, owner);
+            ThrowIfInvalidOperationThenPrepareObject(obj, null);
+            return BindToToken(obj, scene.Token, scene);
+        }
 
-#if UNITY_EDITOR
-            owner.LifetimeBoundObjectNames.Add(obj.ToString());
-#endif
-            return BindToToken(obj, owner.destroyCancellationToken);
+        static IDisposable BindUnityObjectToToken(UnityEngine.Object obj, LifecycleBehaviour owner)
+        {
+            ThrowIfInvalidOperationThenPrepareObject(obj, owner);
+            return BindToToken(obj, owner.destroyCancellationToken, owner);
         }
 
 #if UNITY_2022_2_OR_NEWER
-        /// <summary>Bind unity object lifetime to MonoBehaviour.</summary>
-        public static IDisposable DestroyWith(this UnityEngine.Object obj, MonoBehaviour mono)
+        static IDisposable BindUnityObjectToToken(UnityEngine.Object obj, MonoBehaviour mono)
         {
-            ThrowIfInvalidOperationAndThenPrepareObject(obj, mono);
-            return BindToToken(obj, mono.destroyCancellationToken);
+            ThrowIfInvalidOperationThenPrepareObject(obj, mono);
+            return BindToToken(obj, mono.destroyCancellationToken, mono);
         }
 #endif
 
-
-        //SceneLifecycle
-        [Obsolete(ERROR_SCENE, true)] public static void DestroyWith(this SceneLifecycle _, MonoBehaviour m) => throw new NotSupportedException(ERROR_SCENE);
-        [Obsolete(ERROR_SCENE, true)] public static void DestroyWith(this SceneLifecycle _, CancellationToken c) => throw new NotSupportedException(ERROR_SCENE);
-        [Obsolete(ERROR_SCENE, true)] public static void DestroyWith(this SceneLifecycle _, LifecycleBehaviour l) => throw new NotSupportedException(ERROR_SCENE);
 
         //Transform
         [Obsolete(ERROR_TFORM, true)] public static void DestroyWith(this Transform _, MonoBehaviour m) => throw new NotSupportedException(ERROR_TFORM);
+        [Obsolete(ERROR_TFORM, true)] public static void DestroyWith(this Transform _, SceneLifetime s) => throw new NotSupportedException(ERROR_TFORM);
         [Obsolete(ERROR_TFORM, true)] public static void DestroyWith(this Transform _, CancellationToken c) => throw new NotSupportedException(ERROR_TFORM);
         [Obsolete(ERROR_TFORM, true)] public static void DestroyWith(this Transform _, LifecycleBehaviour l) => throw new NotSupportedException(ERROR_TFORM);
 
 
-        // component: redirect to UnityEngine.Object overload
-        const bool DISALLOW_COMP_BINDING =
-#if LIFECYCLE_DISALLOW_COMPONENT_BINDING
-            true
-#else
-            false
-#endif
-            ;
+        //GameObject
+        /// <summary>Bind GameObject lifetime to cancellation token.</summary>
+        public static IDisposable DestroyWith(this GameObject obj, CancellationToken token) => BindUnityObjectToToken(obj, token);
 
-        [Obsolete(WARN_COMP, DISALLOW_COMP_BINDING)]
-        public static IDisposable DestroyWith(this Component obj, CancellationToken token) => DestroyWith((UnityEngine.Object)obj, token);
+        /// <summary>Bind GameObject lifetime to unity scene.</summary>
+        public static IDisposable DestroyWith(this GameObject obj, SceneLifetime scene) => BindUnityObjectToToken(obj, scene);
 
-        [Obsolete(WARN_COMP, DISALLOW_COMP_BINDING)]
-        public static IDisposable DestroyWith(this Component obj, LifecycleBehaviour owner) => DestroyWith((UnityEngine.Object)obj, owner);
+        /// <summary>Bind GameObject lifetime to lifecycle owner.</summary>
+        public static IDisposable DestroyWith(this GameObject obj, LifecycleBehaviour owner) => BindUnityObjectToToken(obj, owner);
 
 #if UNITY_2022_2_OR_NEWER
-        [Obsolete(WARN_COMP, DISALLOW_COMP_BINDING)]
-        public static IDisposable DestroyWith(this Component obj, MonoBehaviour mono) => DestroyWith((UnityEngine.Object)obj, mono);
+        /// <summary>Bind GameObject lifetime to MonoBehaviour.</summary>
+        public static IDisposable DestroyWith(this GameObject obj, MonoBehaviour mono) => BindUnityObjectToToken(obj, mono);
+#endif
+
+
+        // NOTE: UnityEngine.Object binding will make things complicated.
+        //       need to explicitly call different method to accept side effects.
+
+        [Obsolete(WARN_UNITY_OBJ)]
+        public static IDisposable DestroyUnityObjectWith(this UnityEngine.Object obj, CancellationToken token) => BindUnityObjectToToken(obj, token);
+        [Obsolete(WARN_UNITY_OBJ)]
+        public static IDisposable DestroyUnityObjectWith(this UnityEngine.Object obj, SceneLifetime scene) => BindUnityObjectToToken(obj, scene);
+        [Obsolete(WARN_UNITY_OBJ)]
+        public static IDisposable DestroyUnityObjectWith(this UnityEngine.Object obj, LifecycleBehaviour owner) => BindUnityObjectToToken(obj, owner);
+#if UNITY_2022_2_OR_NEWER
+        [Obsolete(WARN_UNITY_OBJ)]
+        public static IDisposable DestroyUnityObjectWith(this UnityEngine.Object obj, MonoBehaviour mono) => BindUnityObjectToToken(obj, mono);
 #endif
 
     }
@@ -928,7 +1002,7 @@ namespace SatorImaging.LifecycleManager
                 }
 
                 _ = new GameObject(new string('-', 16));
-                var rootOwner = SceneLifecycle.Get();
+                var rootOwner = LifecycleBehaviour.Create("Root Lifecycle", false);
                 if (rootOwner == null)
                     return;
                 _ = new GameObject(new string('-', 16));
@@ -957,21 +1031,19 @@ namespace SatorImaging.LifecycleManager
                     }
 
                     PUREs[i].DestroyWith(childOwner);
-                    COMPs[i].DestroyWith(childOwner);
+                    COMPs[i].DestroyUnityObjectWith(childOwner);
                     GOs[i].DestroyWith(childOwner);
                 }
-
-                // check Obsolete attribute
-                //rootOwner.DestroyWith(rootOwner);
 
                 UnityEditor.Selection.activeGameObject = rootOwner.gameObject;
                 Report_Remaining_References();
             }
 
 
-            [UnityEditor.MenuItem(MENU_ROOT + "Debug Check List", priority = int.MaxValue / 2)]
+            [UnityEditor.MenuItem(MENU_ROOT + "Debug Check List", priority = int.MaxValue / 3)]
+            internal static void DebugCheckList_DoNothing() { }
 
-            [UnityEditor.MenuItem(MENU_ROOT + ">   Unregister by Token", priority = int.MaxValue / 2 + 1)]  //+1
+            [UnityEditor.MenuItem(MENU_ROOT + ">   Unregister by Token", priority = int.MaxValue / 3 + 1)]  //+1
             internal static void Unregister_by_Token()
             {
                 var instance = new TestDisposable(nameof(Unregister_by_Token));
@@ -985,7 +1057,7 @@ namespace SatorImaging.LifecycleManager
                 lc.RegisterUpdate(() => instance.PrintName(), cts.Token);
             }
 
-            [UnityEditor.MenuItem(MENU_ROOT + ">   Don't Unregister by Token (raise error)", priority = int.MaxValue / 2 + 2)]  //+2
+            [UnityEditor.MenuItem(MENU_ROOT + ">   Don't Unregister by Token (raise error)", priority = int.MaxValue / 3 + 2)]  //+2
             internal static void Dont_Unregister_by_Token()
             {
                 var instance = new TestDisposable(nameof(Dont_Unregister_by_Token));
@@ -1000,11 +1072,12 @@ namespace SatorImaging.LifecycleManager
             }
 
 
-            [UnityEditor.MenuItem(MENU_ROOT + ">   Inter-Scene Binding must throw \t by hand", priority = int.MaxValue / 2 + 5)]
-            [UnityEditor.MenuItem(MENU_ROOT + ">   Scene Lifecycle Binding must throw \t by hand", priority = int.MaxValue / 2 + 5)]
-            [UnityEditor.MenuItem(MENU_ROOT + ">   Transform Binding must throw \t by hand", priority = int.MaxValue / 2 + 5)]
-            [UnityEditor.MenuItem(MENU_ROOT + "Select Transform of active GameObject", priority = int.MaxValue / 2 + 10)] //+10
-            internal static void Debug_Check_List()
+            [UnityEditor.MenuItem(MENU_ROOT + ">   Inter-Scene Binding must throw \t by hand", priority = int.MaxValue / 3 + 5)]
+            [UnityEditor.MenuItem(MENU_ROOT + ">   Transform Binding must throw \t by hand", priority = int.MaxValue / 3 + 5)]
+            internal static void DebugCheckList_DoNothing_2() { }
+
+            [UnityEditor.MenuItem(MENU_ROOT + "Select Transform of active GameObject", priority = int.MaxValue / 3 + 10)] //+10
+            internal static void SelectTransformOfActiveGameObject()
             {
                 var go = UnityEditor.Selection.activeGameObject;
                 if (go != null)
@@ -1015,23 +1088,37 @@ namespace SatorImaging.LifecycleManager
             }
 
 
-            internal readonly static Dictionary<WeakReference, WeakReference> _ticketToTarget = new();
+            internal readonly static Dictionary<WeakReference, WeakReference> _ticketOrOwnerToTarget = new();
 
-            [UnityEditor.MenuItem(MENU_ROOT + nameof(Report_Remaining_References), priority = int.MaxValue)]
+            [UnityEditor.MenuItem(MENU_ROOT + nameof(Report_Remaining_References), priority = int.MaxValue / 2)]
             internal static void Report_Remaining_References()
             {
                 GC.Collect();
 
-                foreach (var key in _ticketToTarget.Keys.ToArray())
+                foreach (var key in _ticketOrOwnerToTarget.Keys.ToArray())
                 {
-                    if (!key.IsAlive && (!_ticketToTarget[key].IsAlive || (_ticketToTarget[key].Target as UnityEngine.Object) == null))
+                    // IsAlive is still true even if unity object has been destroyed.
+                    if ((!key.IsAlive || (key.Target as UnityEngine.Object == null))
+                    && (!_ticketOrOwnerToTarget[key].IsAlive || (_ticketOrOwnerToTarget[key].Target as UnityEngine.Object) == null)
+                    )
                     {
-                        _ticketToTarget.Remove(key);
+                        _ticketOrOwnerToTarget.Remove(key);
                     }
                 }
 
-                Debug.LogWarning(nameof(LifecycleBehaviourTests) + ": # of references remaining: " + _ticketToTarget.Count + "\n> "
-                    + string.Join("\n> ", _ticketToTarget.Select(x => $"{x.Key.Target ?? "<NULL>"} -> {x.Value.Target ?? "<NULL>"}")) + "\n");
+                var msg = (nameof(LifecycleBehaviourTests) + ": # of references remaining: " + _ticketOrOwnerToTarget.Count + "\n> "
+                    + string.Join("\n> ", _ticketOrOwnerToTarget.Select(x => $"{x.Key.Target ?? "<NULL>"}  =>  {x.Value.Target ?? "<NULL>"}")) + "\n");
+
+                if (_ticketOrOwnerToTarget.Count > 0)
+                    Debug.LogWarning(msg);
+                else
+                    Debug.Log(msg);
+            }
+
+            [UnityEditor.MenuItem(MENU_ROOT + nameof(Report_Scene_Lifetime_Database), priority = int.MaxValue / 2)]
+            internal static void Report_Scene_Lifetime_Database()
+            {
+                Debug.Log(nameof(LifecycleBehaviourTests) + ": " + SceneLifetime.DumpDatabaseInfo() + "\n");
             }
 
 
@@ -1044,7 +1131,6 @@ namespace SatorImaging.LifecycleManager
                 if (sel.Length < 2)
                     return;
 
-
                 var last = sel.Length - 1;
                 if (sel[last] is not GameObject go)
                     throw new Exception("last selection is not GameObject");
@@ -1054,15 +1140,26 @@ namespace SatorImaging.LifecycleManager
 
                 for (int i = 0; i < last; i++)
                 {
-                    sel[i].DestroyWith(lifecycle);
-                    Debug.Log($"Bound: {sel[i]} -> {lifecycle}");
+                    sel[i].DestroyUnityObjectWith(lifecycle);
                 }
+
+                Report_Remaining_References();
             }
 
-            [UnityEditor.MenuItem(MENU_ROOT + nameof(Get_Scene_Lifecycle), priority = MENU_OPERATE_PRIORITY)]
-            internal static void Get_Scene_Lifecycle()
+            [UnityEditor.MenuItem(MENU_ROOT + nameof(Bind_Lifetime_to_Unity_Scene), priority = MENU_OPERATE_PRIORITY)]
+            internal static void Bind_Lifetime_to_Unity_Scene()
             {
-                _ = SceneLifecycle.Get();
+                var sel = UnityEditor.Selection.objects;
+                if (sel.Length < 1)
+                    return;
+
+                var sceneLC = SceneLifetime.Get();
+                for (int i = 0; i < sel.Length; i++)
+                {
+                    sel[i].DestroyUnityObjectWith(sceneLC);
+                }
+
+                Report_Remaining_References();
             }
 
             static int _currentLifecycleID = 1;
@@ -1075,6 +1172,20 @@ namespace SatorImaging.LifecycleManager
                     );
             }
 
+            [UnityEditor.MenuItem(MENU_ROOT + nameof(Create_New_Scene_Lifecycle), priority = MENU_OPERATE_PRIORITY)]
+            internal static void Create_New_Scene_Lifecycle()
+            {
+                _ = SceneLifecycle.Get();
+                Report_Scene_Lifetime_Database();
+            }
+
+            [UnityEditor.MenuItem(MENU_ROOT + nameof(Get_SceneLifetime), priority = MENU_OPERATE_PRIORITY)]
+            internal static void Get_SceneLifetime()
+            {
+                _ = SceneLifetime.Get();
+                Report_Scene_Lifetime_Database();
+            }
+
 
             const int MENU_SCENE_PRIORITY = 1100;
 
@@ -1084,6 +1195,20 @@ namespace SatorImaging.LifecycleManager
             {
                 var scene = SceneManager.CreateScene("BLANK" + _currentSceneID--);
                 SceneManager.SetActiveScene(scene);
+            }
+
+            [UnityEditor.MenuItem(MENU_ROOT + nameof(Create_Blank_Scene_and_Unload_All), priority = MENU_SCENE_PRIORITY)]
+            internal static void Create_Blank_Scene_and_Unload_All()
+            {
+                Create_Blank_Scene();
+                var current = SceneManager.GetActiveScene();
+                var count = SceneManager.sceneCount;
+                for (var i = 0; i < count; i++)
+                {
+                    var scene = SceneManager.GetSceneAt(i);
+                    if (scene != current && scene.isLoaded && scene.IsValid())
+                        SceneManager.UnloadSceneAsync(scene);
+                }
             }
 
             [UnityEditor.MenuItem(MENU_ROOT + nameof(Create_Blank_Scene_and_Unload_Current), priority = MENU_SCENE_PRIORITY)]
@@ -1102,8 +1227,11 @@ namespace SatorImaging.LifecycleManager
 
 
             [UnityEditor.MenuItem(MENU_ROOT + nameof(Bind_Lifetime_to_Last_Selection), true)]
+            [UnityEditor.MenuItem(MENU_ROOT + nameof(Bind_Lifetime_to_Unity_Scene), true)]
             [UnityEditor.MenuItem(MENU_ROOT + nameof(Create_New_Lifecycle), true)]
-            [UnityEditor.MenuItem(MENU_ROOT + nameof(Get_Scene_Lifecycle), true)]
+            [UnityEditor.MenuItem(MENU_ROOT + nameof(Create_New_Scene_Lifecycle), true)]
+            [UnityEditor.MenuItem(MENU_ROOT + nameof(Get_SceneLifetime), true)]
+            [UnityEditor.MenuItem(MENU_ROOT + nameof(Create_Blank_Scene_and_Unload_All), true)]
             [UnityEditor.MenuItem(MENU_ROOT + nameof(Create_Blank_Scene_and_Unload_Current), true)]
             [UnityEditor.MenuItem(MENU_ROOT + nameof(Create_Blank_Scene), true)]
             [UnityEditor.MenuItem(MENU_ROOT + nameof(Unload_Active_Scene), true)]
@@ -1178,5 +1306,3 @@ namespace SatorImaging.LifecycleManager
 #endif
 
 }
-
-#nullable restore
