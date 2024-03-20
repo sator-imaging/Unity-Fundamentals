@@ -46,7 +46,7 @@ child.DestroyWith(root);
 grand.DestroyWith(child);
     // --> child and grand will be marked as DontDestroyOnLoad automatically
 
-// action for debugging purpose which will be invoked before binding (when not null)
+// action for debugging purpose which will be invoked when object bound (set null if don't require)
 LifetimeExtensions.DebuggerAction = (obj, token, ticket, ownerOrNull) =>
 {
     Debug.Log($"Target Object: {obj}");
@@ -511,9 +511,8 @@ namespace SatorImaging.LifecycleManager
             /// Do nothing when null action specified.
             /// </remarks>
             /// <returns>
-            /// <para>
             /// Returns received action instance as-is. It is null when null is passed.
-            /// </para>
+            /// <br/>
             /// > [!NOTE]
             /// > `Add(instance.Method)` will create new Action instance call by call implicitly.
             /// > If plan to remove action later, removing requires exactly same instance so need to keep returned one.
@@ -539,9 +538,8 @@ namespace SatorImaging.LifecycleManager
             }
 
             /// <remarks>
-            /// <para>
             /// Do nothing when null action specified.
-            /// </para>
+            /// <br/>
             /// > [!WARNING]
             /// > Item order will be changed. See file header document for details.
             /// </remarks>
@@ -799,7 +797,7 @@ namespace SatorImaging.LifecycleManager
             }
 
 #if UNITY_EDITOR
-            if (Application.IsPlaying(obj))
+            if (UnityEditor.EditorApplication.isPlaying)
 #endif
                 UnityEngine.Object.Destroy(obj);
         }

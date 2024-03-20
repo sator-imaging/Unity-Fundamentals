@@ -44,7 +44,7 @@ child.DestroyWith(root);
 grand.DestroyWith(child);
     // --> child and grand will be marked as DontDestroyOnLoad automatically
 
-// action for debugging purpose which will be invoked before binding (when not null)
+// action for debugging purpose which will be invoked when object bound (set null if don't require)
 LifetimeExtensions.DebuggerAction = (obj, token, ticket, ownerOrNull) =>
 {
     Debug.Log($"Target Object: {obj}");
