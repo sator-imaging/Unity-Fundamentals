@@ -236,6 +236,10 @@ namespace SatorImaging.LifecycleManager
 
         public void OnDestroy()
         {
+#if false == UNITY_2022_2_OR_NEWER
+            polyfill_destroyToken?.Cancel();
+#endif
+
 #if UNITY_EDITOR
             Debug.Log(LOG_PREFIX + "going to be destroyed: " + this);
 #endif
@@ -254,15 +258,10 @@ namespace SatorImaging.LifecycleManager
             _lateUpdateUsual?.Clear();
             _lateUpdateLater?.Clear();
             _lateUpdateFinal?.Clear();
-
-#if false == UNITY_2022_2_OR_NEWER
-            polyfill_destroyToken?.Cancel();
-#endif
         }
 
 
         // helper
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static LifecycleBehaviour Create(string nameOfGameObject, bool dontDestroyOnLoad)
         {
             var go = new GameObject(nameOfGameObject);
@@ -414,6 +413,7 @@ namespace SatorImaging.LifecycleManager
                 this.list = list;
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public /*readonly*/ void Dispose()
             {
                 list.Remove(action);
@@ -631,6 +631,7 @@ namespace SatorImaging.LifecycleManager
         private CancellationTokenSource? _tokenSource;
         public CancellationToken Token => (_tokenSource ??= new()).Token;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void CancelToken() => _tokenSource?.Cancel();
 
 
@@ -668,6 +669,7 @@ namespace SatorImaging.LifecycleManager
 
 
         // call this method on each helper calls
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void ThrowIfCacheIsInvalid()
         {
             foreach (var scene in _sceneToLifetime.Keys)
@@ -691,6 +693,7 @@ namespace SatorImaging.LifecycleManager
 
 
         /// <summary>Get lifetime of active scene.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static SceneLifetime Get() => Get(SceneManager.GetActiveScene());
 
         /// <summary>Get lifetime of specified scene.</summary>
@@ -715,6 +718,7 @@ namespace SatorImaging.LifecycleManager
     {
         /// <summary>Get scene-bound lifecycle of active scene.</summary>
         /// <inheritdoc cref="Get(Scene)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static LifecycleBehaviour Get() => Get(SceneManager.GetActiveScene());
 
         /// <summary>Get scene-bound lifecycle of specified scene.</summary>
@@ -769,6 +773,7 @@ namespace SatorImaging.LifecycleManager
         /// GameObject.FindWithTag() or other Unity native functions unexpectedly retrieve
         /// destroyed objects. thus need to "hide" destroyed object from those functions.
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void DeepDestroy_NoCheck(UnityEngine.Object obj)
         {
             // NOTE: already checked
@@ -845,7 +850,6 @@ namespace SatorImaging.LifecycleManager
             return scene.buildIndex != -1 || scene.path != scene.name || scene.name != nameof(UnityEngine.Object.DontDestroyOnLoad);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void ThrowIfInvalidOperationThenPrepareObject(UnityEngine.Object obj, Component? owner)
         {
             if (obj is Transform)
@@ -893,18 +897,21 @@ namespace SatorImaging.LifecycleManager
 
         /* =      UnityEngine.Object      = */
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static IDisposable BindUnityObjectToToken(UnityEngine.Object obj, CancellationToken token)
         {
             ThrowIfInvalidOperationThenPrepareObject(obj, null);
             return BindToToken(obj, token, null);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static IDisposable BindUnityObjectToToken(UnityEngine.Object obj, SceneLifetime scene)
         {
             ThrowIfInvalidOperationThenPrepareObject(obj, null);
             return BindToToken(obj, scene.Token, scene);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static IDisposable BindUnityObjectToToken(UnityEngine.Object obj, LifecycleBehaviour owner)
         {
             ThrowIfInvalidOperationThenPrepareObject(obj, owner);
@@ -912,6 +919,7 @@ namespace SatorImaging.LifecycleManager
         }
 
 #if UNITY_2022_2_OR_NEWER
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static IDisposable BindUnityObjectToToken(UnityEngine.Object obj, MonoBehaviour mono)
         {
             ThrowIfInvalidOperationThenPrepareObject(obj, mono);
