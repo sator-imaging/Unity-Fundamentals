@@ -516,7 +516,7 @@ namespace SatorImaging.LifecycleManager
             /// <para>
             /// > [!NOTE]
             /// > `Add(instance.Method)` will create new Action instance call by call implicitly.
-            /// > If try to remove action later, it requires to specify exactly same instance so need to keep returned instance.
+            /// > If plan to remove action later, removing requires exactly same instance so need to keep returned one.
             /// </para>
             /// </returns>
             public Action Add(Action act)
@@ -611,12 +611,12 @@ namespace SatorImaging.LifecycleManager
         {
             if (_sceneToLifetime.ContainsKey(scene))
             {
-                throw new InvalidOperationException(
+                throw new ArgumentException(
                     LOG_PREFIX + "scene lifetime has already been created. use `Get` method instead: " + scene);
             }
 
             if (!scene.IsValid())
-                throw new NotSupportedException(LOG_PREFIX + "scene is invalid: " + scene);
+                throw new ArgumentException(LOG_PREFIX + "scene is invalid: " + scene);
 
             _sceneInfo = "BuildIndex:" + scene.buildIndex + " " + scene.name;
             _sceneToLifetime.Add(scene, this);
