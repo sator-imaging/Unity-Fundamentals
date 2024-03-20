@@ -26,7 +26,6 @@ Here is example to bind instance lifetime to cancellation token or MonoBehaviour
 ```csharp
 using SatorImaging.LifecycleManager;
 
-// works on Unity 2021 or later
 disposable.DestroyWith(monoBehaviourOrCancellationToken);
 gameObject.DestroyWith(cancellationToken);
 unityObj.DestroyUnityObjectWith(tokenOrBehaviour);
