@@ -1,14 +1,14 @@
-﻿/** Simple Lifecycle Manager for Unity
+﻿/** CancellationToken based Lifecycle Manager for Unity
  ** (c) 2024 github.com/sator-imaging
  ** Licensed under the MIT License
 
-This library helps managing MonoBehaviour lifetime by CancellationToken introduced in Unity 2022.
+This library helps managing MonoBehaviour lifetime by `CancellationToken` introduced in Unity 2022.
 Not only that but also has an ability to manage "Update" actions ordered and efficiently.
 
 And also! library provides missing `destroyCancellationToken` feature for Unity 2021 LTS!!
 
 **Feature Highlights**
-- [Class Instance Lifetime Management](#object-lifetime-management)
+- [Object Lifetime Management](#object-lifetime-management)
 - [Update Function Manager](#update-function-manager)
     - Designed to address consideration written in the following article
     - https://blog.unity.com/engine-platform/10000-update-calls
@@ -101,7 +101,7 @@ destruction order is NOT stable. For reference, MonoBehaviours (components) will
 when scene is unloaded otherwise destroyed based on binding order.
 
 > [!NOTE]
-> To make destruction order stable, extension method automatically mark lifetime bound GameObjects as
+> To make destruction order stable, extension method automatically marks lifetime bound GameObjects as
 > `DontDestroyOnLoad`.
 
 
@@ -512,12 +512,12 @@ namespace SatorImaging.LifecycleManager
             /// Do nothing when null action specified.
             /// </remarks>
             /// <returns>
-            /// Returns received action instance as-is. It is null when null is passed.
             /// <para>
+            /// Returns received action instance as-is. It is null when null is passed.
+            /// </para>
             /// > [!NOTE]
             /// > `Add(instance.Method)` will create new Action instance call by call implicitly.
             /// > If plan to remove action later, removing requires exactly same instance so need to keep returned one.
-            /// </para>
             /// </returns>
             public Action Add(Action act)
             {
@@ -540,11 +540,11 @@ namespace SatorImaging.LifecycleManager
             }
 
             /// <remarks>
-            /// Do nothing when null action specified.
             /// <para>
+            /// Do nothing when null action specified.
+            /// </para>
             /// > [!WARNING]
             /// > Item order will be changed. See file header document for details.
-            /// </para>
             /// </remarks>
             public void Remove(Action act)
             {
@@ -745,7 +745,7 @@ namespace SatorImaging.LifecycleManager
         /// <summary>
         /// Arguments: (obj, token, ticket, ownerOrNull)
         /// <para>
-        /// Invoked before object bound to token.
+        /// Invoked when object bound to token or lifetime owner.
         /// </para>
         /// </summary>
         public static Action<object, CancellationToken, CancellationTokenRegistration, object?>? DebuggerAction
