@@ -588,7 +588,6 @@ namespace SatorImaging.LifecycleManager
 
 
             /// <returns>Copy of internal array. Empty when internal array haven't yet allocated.</returns>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public Action[] GetActions() => GetSpanOrEmpty().ToArray() as Action[];
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
