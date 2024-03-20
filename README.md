@@ -1,10 +1,12 @@
-This library helps managing MonoBehaviour lifetime by CancellationToken introduced in Unity 2022.
+# CancellationToken based Lifecycle Manager for Unity
+
+This library helps managing MonoBehaviour lifetime by `CancellationToken` introduced in Unity 2022.
 Not only that but also has an ability to manage "Update" actions ordered and efficiently.
 
 And also! library provides missing `destroyCancellationToken` feature for Unity 2021 LTS!!
 
 **Feature Highlights**
-- [Class Instance Lifetime Management](#object-lifetime-management)
+- [Object Lifetime Management](#object-lifetime-management)
 - [Update Function Manager](#update-function-manager)
     - Designed to address consideration written in the following article
     - https://blog.unity.com/engine-platform/10000-update-calls
@@ -97,7 +99,7 @@ destruction order is NOT stable. For reference, MonoBehaviours (components) will
 when scene is unloaded otherwise destroyed based on binding order.
 
 > [!NOTE]
-> To make destruction order stable, extension method automatically mark lifetime bound GameObjects as
+> To make destruction order stable, extension method automatically marks lifetime bound GameObjects as
 > `DontDestroyOnLoad`.
 
 

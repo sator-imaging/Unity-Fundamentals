@@ -1,9 +1,9 @@
 {
   "name": "com.sator-imaging.unity-lifecycle-manager",
-  "displayName": "MonoBehaviour Lifecycle Manager",
+  "displayName": "CancellationToken based Lifecycle Manager",
   "version": "0.9.0",
   "unity": "2021.3",
-  "description": "MonoBehaviour lifecycle and update function manager.",
+  "description": "Provides MonoBehaviour update function manager component and CancellationToken based object lifetime management.",
   "author": {
     "name": "Sator Imaging",
     "url": "https://twitter.com/sator_imaging"
