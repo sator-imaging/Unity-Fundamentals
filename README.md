@@ -4,10 +4,11 @@ Not only that but also has an ability to manage "Update" actions ordered and eff
 And also! library provides missing `destroyCancellationToken` feature for Unity 2021 LTS!!
 
 **Feature Highlights**
-- [Object Lifetime Management](#object-lifetime-management)
+- [Class Instance Lifetime Management](#object-lifetime-management)
 - [Update Function Manager](#update-function-manager)
     - Designed to address consideration written in the following article
     - https://blog.unity.com/engine-platform/10000-update-calls
+- [API Reference](https://sator-imaging.github.io/Unity-LifecycleManager)
 
 **Installation**
 - In Unity 2021 or later, Enter the following URL in Unity Package Manager (UPM)
@@ -22,15 +23,17 @@ Here is example to bind instance lifetime to cancellation token or MonoBehaviour
 using SatorImaging.LifecycleManager;
 
 // works on Unity 2021 or later
-IDisposable.DestroyWith(monoBehaviourOrCancellationToken);
-unityObj.DestroyWith(cancellationToken);
-component.DestroyWith(tokenOrMonoBehaviour);
+disposable.DestroyWith(monoBehaviourOrCancellationToken);
+gameObject.DestroyWith(cancellationToken);
+unityObj.DestroyUnityObjectWith(tokenOrBehaviour);
 
-// bind to scene lifecycle
-var sceneLifecycle = SceneLifecycle.Get(gameObject.scene);
-disposable.DestroyWith(sceneLifecycle);
-sceneLifecycle.DestroyWith(cancellationToken);  // error
-                                                // scene lifecycle is restricted from being bound
+// bind to unity scene lifetime
+var sceneLifetime = SceneLifetime.Get(gameObject.scene);
+disposable.DestroyWith(sceneLifetime);
+sceneLifetime.Token.Register(() => DoSomethingOnSceneUnloading());
+
+// lifecycle and its GameObject which will be destroyed on scene unloading
+var sceneLC = SceneLifecycle.Get();
 
 // nesting lifecycles
 var root = LifecycleBehaviour.Create("Root Lifecycle");
@@ -41,9 +44,11 @@ grand.DestroyWith(child);
     // --> child and grand will be marked as DontDestroyOnLoad automatically
 
 // action for debugging purpose which will be invoked before binding (when not null)
-LifetimeExtensions.DebuggerAction = (obj, token, ticket) =>
+LifetimeExtensions.DebuggerAction = (obj, token, ticket, ownerOrNull) =>
 {
     Debug.Log($"Target Object: {obj}");
+    if (ownerOrNull != null)
+        Debug.Log($"Lifetime Owner: {ownerOrNull}");
     Debug.Log($"CancellationToken: {token}");
     Debug.Log($"CancellationTokenRegistration: {ticket}");
 };
@@ -53,21 +58,17 @@ LifetimeExtensions.DebuggerAction = (obj, token, ticket) =>
 Technical Note
 --------------
 
-### Component Binding Notice
+### Unity Object/Component Binding Notice
 
-You can bind `UnityEngine.Component` lifetime to cancellation token or MonoBehaviour, but you
-need to consider both situation component is destroyed by scene unloading OR by lifetime owner.
-As a result, it makes thing really complex and scene will be spaghetti-ed.
+You can bind `UnityEngine.Object` or component lifetime to cancellation token or MonoBehaviour by using
+`DestroyUnityObjectWith` extension method instead of `DestroyWith`.
 
-Strongly recommended that binding GameObject lifetime instead of component.
+Note that when binding unity object lifetime to other, need to consider both situation that component is
+destroyed by scene unloading OR by lifetime owner. As a result, it makes thing really complex and scene
+will be spaghetti-ed.
 
-> [!NOTE]
-> As you know there is `DontDestroyOnLoad` feature in Unity but it is hard to determine that
-> component.gameObject is safe to be marked as `DontDestroyOnLoad` programatically.
-
-> [!TIP]
-> Set preprocessor symbol `LIFECYCLE_DISALLOW_COMPONENT_BINDING` to disallow component binding.
-> When not set, IDE shows underline on use to confirm "are you sure?".
+Strongly recommended that binding GameObject lifetime instead of component, or implement `IDisposable`
+on your unity engine object explicitly to preciously control behaviour.
 
 
 ### Inter-Scene Binding Notice
@@ -76,8 +77,8 @@ Lifetime binding across scenes is restricted. Nevertheless you want to bind life
 scene object, use `DestroyWith(CancellationToken)` method with `monoBehaviour.destroyCancellationToken`.
 
 > [!WARNING]
-> When Unity object bound to another scene object, it will be destroyed by both when scene which
-> containing bound object is unloaded and lifetime owner is destroyed.
+> When Unity object bound to another scene object, it will be destroyed by both when lifetime owner is
+> destroyed and scene which containing bound object is unloaded.
 
 
 ### Quick Tests
@@ -96,11 +97,8 @@ destruction order is NOT stable. For reference, MonoBehaviours (components) will
 when scene is unloaded otherwise destroyed based on binding order.
 
 > [!NOTE]
-> To make destruction order stable, lifetime bound GameObjects are marked as `DontDestroyOnLoad`.
-
-> [!TIP]
-> Set preprocessor symbol `LIFECYCLE_DISABLE_STABLE_DESTROY_ORDER` to disable automatic `DontDestroyOnLoad`.
-> ie. Destruction order could be unstable and object may be destroyed by scene unloading.
+> To make destruction order stable, extension method automatically mark lifetime bound GameObjects as
+> `DontDestroyOnLoad`.
 
 
 
@@ -108,10 +106,6 @@ Update Function Manager
 =======================
 In this feature, each "update" function has 5 stages, Initialize, Early, Normal, Late and Finalize.
 Initialize and Finalize is designed for system usage, other 3 stages are for casual usage.
-
-> [!NOTE]
-> For optimization, removing registered action will swap items in list to prevent array reordering.
-> ie. Execution order of stages are promised but registered action order is NOT promised.
 
 ```csharp
 // create lifecycle behaviour
@@ -135,10 +129,16 @@ var entry = lifecycle.RegisterUpdateLate(...);
 lifecycle.RemoveUpdateLate(entry);
 ```
 
+> [!NOTE]
+> For performance optimization, removing registered action will swap items in list instead of reordering
+> whole items in list.
+> ie. Order of update stages (early, late, etc) are promised but registered action order is NOT promised.
+> (like Unity)
+
 
 Automatic Unregistration
 ------------------------
-If action is depending on instance that will be destroyed with cancellation token, You can specify
+If action is depending on instance that will be destroyed with cancellation token, You have to specify
 same token to unregister action together when token is canceled.
 
 ```csharp

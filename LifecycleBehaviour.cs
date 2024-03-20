@@ -8,7 +8,7 @@ Not only that but also has an ability to manage "Update" actions ordered and eff
 And also! library provides missing `destroyCancellationToken` feature for Unity 2021 LTS!!
 
 **Feature Highlights**
-- [Object Lifetime Management](#object-lifetime-management)
+- [Class Instance Lifetime Management](#object-lifetime-management)
 - [Update Function Manager](#update-function-manager)
     - Designed to address consideration written in the following article
     - https://blog.unity.com/engine-platform/10000-update-calls
@@ -294,8 +294,9 @@ namespace SatorImaging.LifecycleManager
         protected UnorderedActionList? _lateUpdateFinal;
 
         /// <summary>
-        /// Set `enabled` of this mono behaviour false and call this method explicitly in "manager of update managers" to
-        /// control lifecycle execution order while keeping registered action order. (if required)
+        /// > [!TIP]
+        /// > Set `enabled` of this mono behaviour false and call this method explicitly in "manager of update managers" to
+        /// > manage multiple update managers execution order while keeping registered actions order.
         /// </summary>
         public void Update()
         {
@@ -484,7 +485,7 @@ namespace SatorImaging.LifecycleManager
         public Action? RegisterLateUpdateFinalize(Action act, CancellationToken ct = default)     /**/ => Register(act, ct, _lateUpdateFinal ??= new());
 
 
-        // NOTE: MUST keep this class non-public. null checking must be done by caller to avoid double-check.
+        // NOTE: MUST keep this class non-public because null checking must be done by caller to avoid double-check.
         //       ie. action list could have null entry if consumer doesn't care.
         /// <remarks>
         /// [NOT Thread-Safe]
@@ -618,9 +619,7 @@ namespace SatorImaging.LifecycleManager
             if (!scene.IsValid())
                 throw new NotSupportedException(LOG_PREFIX + "scene is invalid: " + scene);
 
-
-
-            _sceneInfo = "BuildIdx:" + scene.buildIndex + " " + scene.name;
+            _sceneInfo = "BuildIndex:" + scene.buildIndex + " " + scene.name;
             _sceneToLifetime.Add(scene, this);
         }
 
@@ -692,12 +691,10 @@ namespace SatorImaging.LifecycleManager
 
 
         /// <summary>Get lifetime of active scene.</summary>
-        /// <returns>null when scene is invalid or unloaded.</returns>
         public static SceneLifetime Get() => Get(SceneManager.GetActiveScene());
 
         /// <summary>Get lifetime of specified scene.</summary>
         /// <param name="scene">`gameObject.scene` or `SceneManager.Get...` or something.</param>
-        /// <inheritdoc cref="Get()"/>
         public static SceneLifetime Get(Scene scene)
         {
             ThrowIfCacheIsInvalid();
@@ -722,6 +719,7 @@ namespace SatorImaging.LifecycleManager
 
         /// <summary>Get scene-bound lifecycle of specified scene.</summary>
         /// <returns>Lifecycle and its GameObject will be destroyed automatically on sceneUnloaded event.</returns>
+        /// <inheritdoc cref="SceneLifetime.Get(Scene)"/>
         public static LifecycleBehaviour Get(Scene scene)
         {
             var lifetime = SceneLifetime.Get(scene);
@@ -806,7 +804,7 @@ namespace SatorImaging.LifecycleManager
 
         /*  extension methods  ================================================================ */
 
-        /// <summary>To avoid allocation when register action to cancellation token.</summary>
+        /// <summary>Designed to avoid allocation when register callback to cancellation token.</summary>
         readonly static Action<object> DisposerAction = obj =>
         {
             // NOTE: when object is bound to multiple tokens, it could be null
