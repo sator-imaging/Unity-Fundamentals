@@ -1,9 +1,9 @@
 {
-  "name": "com.sator-imaging.unity-lifecycle-manager",
-  "displayName": "CancellationToken based Lifecycle Manager",
+  "name": "com.sator-imaging.unity-scripting-fundamentals",
+  "displayName": "Unity Scripting Fundamentals",
   "version": "0.9.0",
   "unity": "2021.3",
-  "description": "Provides MonoBehaviour update function manager component and CancellationToken based object lifetime management.",
+  "description": "Scripting Library for Unity featuring Main Thread Dispatcher, CancellationToken based Object Lifetime Management, Unity \"Update\" Function Manager and Efficient Coroutine Runner.",
   "author": {
     "name": "Sator Imaging",
     "url": "https://twitter.com/sator_imaging"
@@ -11,10 +11,18 @@
   "category": "Unity",
   "keywords": [
     "unity",
+    "scripting",
+    "fundamental",
+    "library",
+    "mainThread",
+    "dispatcher",
+    "cancellationToken",
     "monoBehaviour",
     "lifecycle",
+    "lifetime",
     "updateManager",
-    "cancellationToken"
+    "efficient",
+    "coroutine"
   ],
   "dependencies": {
   },
