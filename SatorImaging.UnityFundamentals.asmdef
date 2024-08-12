@@ -1,6 +1,6 @@
 {
-    "name": "SatorImaging.LifecycleManager",
-    "rootNamespace": "SatorImaging.LifecycleManager",
+    "name": "SatorImaging.UnityFundamentals",
+    "rootNamespace": "SatorImaging.UnityFundamentals",
     "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
