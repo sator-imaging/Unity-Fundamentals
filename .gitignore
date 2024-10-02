@@ -1,0 +1,6 @@
+﻿.*/
+*/**/.*
+
+**/bin/
+**/obj/
+**/BenchmarkDotNet.Artifacts/
