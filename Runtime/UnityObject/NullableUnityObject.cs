@@ -17,6 +17,7 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Object = UnityEngine.Object;
 
 #nullable enable
@@ -68,6 +69,7 @@ namespace SatorImaging.UnityFundamentals
     /// </summary>
     [Obsolete("!!! this struct must not be used except for designated usage !!!")]
     [EditorBrowsable(EditorBrowsableState.Never)]
+    [StructLayout(LayoutKind.Auto)]
     public readonly struct NullableUnityObject<T> : IEquatable<NullableUnityObject<T>>, IEquatable<T>
         where T : Object
     {
