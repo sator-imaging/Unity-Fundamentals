@@ -1,7 +1,12 @@
 {
     "name": "SatorImaging.UnityFundamentals",
     "rootNamespace": "SatorImaging.UnityFundamentals",
-    "references": [],
+    "references": [
+        "UnityEngine.UI",
+        "UnityEditor.UI",
+        "Unity.TextMeshPro",
+        "Unity.TextMeshPro.Editor"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
