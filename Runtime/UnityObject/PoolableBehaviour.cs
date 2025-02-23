@@ -311,7 +311,7 @@ namespace SatorImaging.UnityFundamentals
 // TEMPLATE: namespace naming convention: <TEST_TARGET>.<ROOT_MENU_LABEL>.<SUB_MENU_LABEL>
 namespace SatorImaging.UnityFundamentals.DEBUG.Poolable_Behaviour  // must be unique. don't reuse existing namespace
 {
-    public static class UNITY_EDITOR_DEBUG  // don't change
+    static class UNITY_EDITOR_DEBUG  // don't change
     {
         const string MENU_ROOT = nameof(DEBUG) + "/" + nameof(Poolable_Behaviour) + "/";
 

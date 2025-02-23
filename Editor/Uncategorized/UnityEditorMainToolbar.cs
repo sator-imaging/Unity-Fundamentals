@@ -96,7 +96,7 @@ namespace SatorImaging.UnityFundamentals.Editor
 // TEMPLATE: namespace naming convention: <TEST_TARGET>.<ROOT_MENU_LABEL>.<SUB_MENU_LABEL>
 namespace SatorImaging.UnityFundamentals.Editor.DEBUG.Unity_Editor_Main_Toolbar  // must be unique. don't reuse existing namespace
 {
-    public static class UNITY_EDITOR_DEBUG  // don't change
+    static class UNITY_EDITOR_DEBUG  // don't change
     {
         const string MENU_ROOT = nameof(DEBUG) + "/" + nameof(Unity_Editor_Main_Toolbar) + "/";
 
