@@ -50,11 +50,11 @@ namespace SatorImaging.UnityFundamentals.Editor
 
         /*  activate/deactivate  ================================================================ */
 
-        readonly List<AssemblyDefinitionAsset?> _implicitADefList = new();
+        readonly System.Collections.Generic.List<AssemblyDefinitionAsset?> _implicitADefList = new();
 
         [DescriptionAttribute("tuple: (assetPath, fileNameNoExt)")]
-        readonly List<(string assetPath, string fileNameNoExt)> _assetsADefInfoList = new();
-        readonly List<GUIContent> _assetsADefLabelList = new();
+        readonly System.Collections.Generic.List<(string assetPath, string fileNameNoExt)> _assetsADefInfoList = new();
+        readonly System.Collections.Generic.List<GUIContent> _assetsADefLabelList = new();
 
         public override void OnDeactivate()
         {
