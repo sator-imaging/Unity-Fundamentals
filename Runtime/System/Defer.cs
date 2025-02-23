@@ -22,7 +22,7 @@ something.Value = tempValue;
 
 // 'using-block' example
 var data = (name: "value tuple", value: 3.10f);
-using (data.Defer(static x => Console.WriteLine($"Disposed: {x.name} ({x.value})))
+using (data.Defer(static x => Console.WriteLine($"Disposed: {x.name} ({x.value}")))
 {
     Console.WriteLine("Disposing " + data.Value.name);
 }
