@@ -412,7 +412,7 @@ namespace NUnit.Framework
 // TEMPLATE: namespace naming convention: <TEST_TARGET>.<ROOT_MENU_LABEL>.<SUB_MENU_LABEL>
 namespace NUnit.Framework.TEST.NUnit_Unity_Stubs  // must be unique. don't reuse existing namespace
 {
-    public static class UNITY_EDITOR_TESTS  // don't change
+    static class UNITY_EDITOR_TESTS  // don't change
     {
         const string MENU_ROOT = nameof(TEST) + "/" + nameof(NUnit_Unity_Stubs) + "/";
 
