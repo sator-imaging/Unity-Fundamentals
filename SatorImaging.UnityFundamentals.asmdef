@@ -9,6 +9,27 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.textmeshpro",
+            "expression": "",
+            "define": "STMG_TEXTMESHPRO_EXISTS"
+        },
+        {
+            "name": "com.unity.ugui",
+            "expression": "2.0.0",
+            "define": "STMG_TEXTMESHPRO_EXISTS"
+        },
+        {
+            "name": "com.unity.ugui",
+            "expression": "",
+            "define": "STMG_UGUI_EXISTS"
+        },
+        {
+            "name": "com.unity.modules.uielements",
+            "expression": "",
+            "define": "STMG_UITOOLKIT_EXISTS"
+        }
+    ],
     "noEngineReferences": false
 }
