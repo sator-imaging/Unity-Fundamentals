@@ -1,4 +1,4 @@
-﻿/** StrictEnum for Unity and C# / .NET
+﻿/** StrictEnum for .NET / Unity
  ** (c) 2024 Sator Imaging, Licensed under the MIT License
  ** https://github.com/sator-imaging/Unity-Fundamentals
 
