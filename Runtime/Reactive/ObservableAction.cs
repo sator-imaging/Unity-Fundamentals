@@ -8,7 +8,7 @@ BASIC USAGE
 // ObservableAction<int> is 24 bytes struct. recommend cast to interface once on instantiate.
 private event Action<int>? Ev_MyEvent;
 IObservableAction<int>? cache_MyEvent;
-public IObservableAction<T> MyEvent => cache_MyEvent ??= new ObservableAction<T>(
+public IObservableAction<int> MyEvent => cache_MyEvent ??= new ObservableAction<T>(
     cb => Ev_MyEvent += cb,
     cb => Ev_MyEvent -= cb);
 
