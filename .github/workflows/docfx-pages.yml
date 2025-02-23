@@ -57,9 +57,9 @@ jobs:
 
           # required options
           # NOTE: double-quote (") cannot be used, backquote (`) must be escaped (\`).
-          app_name:    'Lifecycle Manager'
-          site_title:  'Lifecycle and Update Function Manager'
-          site_footer: '&copy; 2024 Sator Imaging'
+          app_name:    'Unity Fundamentals'
+          site_title:  'Unity Scripting Fundamentals'
+          site_footer: '&copy; 2024-2025 Sator Imaging'
 
           # optional
           class_members: 'separatePages'  # 'separatePages' or 'samePage'
