@@ -1,7 +1,5 @@
-﻿/** Assembly Definitions Manager for Project Settings Panel
- ** (c) 2024 https://github.com/sator-imaging
- ** Licensed under the MIT License
- */
+﻿// (c) 2024-2025 Sator Imaging, Licensed under the MIT License
+// https://github.com/sator-imaging/Unity-Fundamentals
 
 using System;
 using System.IO;

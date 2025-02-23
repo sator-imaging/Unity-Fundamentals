@@ -1,4 +1,7 @@
-﻿using System;
+﻿// (c) 2024-2025 Sator Imaging, Licensed under the MIT License
+// https://github.com/sator-imaging/Unity-Fundamentals
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
