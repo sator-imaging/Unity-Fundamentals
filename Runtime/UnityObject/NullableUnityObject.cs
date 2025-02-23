@@ -1,6 +1,6 @@
 /** Nullable support for `UnityEngine.Object`
- ** (c) 2024 https://github.com/sator-imaging
- ** Licensed under the MIT License
+ ** (c) 2024 Sator Imaging, Licensed under the MIT License
+ ** https://github.com/sator-imaging/Unity-Fundamentals
 
 How to Use
 ==========
