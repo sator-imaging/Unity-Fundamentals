@@ -472,8 +472,8 @@ namespace SatorImaging.UnityFundamentals
         const int TEST_DATA_SIZE = 101;
 
         /* Checks a hash value. */
-        public static void UnityEditor_TestSequence32(ReadOnlySpan<byte> test_data, int length,
-                                                      uint seed, int expected)
+        static void UnityEditor_TestSequence32(ReadOnlySpan<byte> test_data, int length,
+                                               uint seed, int expected)
         {
             int result = XXH32(test_data, length, seed);
             if (result != expected)
@@ -487,8 +487,8 @@ namespace SatorImaging.UnityFundamentals
         }
 
         /* Checks a hash value. */
-        public static void UnityEditor_TestSequence64(ReadOnlySpan<byte> test_data, int length,
-                                                      ulong seed, long expected)
+        static void UnityEditor_TestSequence64(ReadOnlySpan<byte> test_data, int length,
+                                               ulong seed, long expected)
         {
             long result = XXH64(test_data, length, seed);
             if (result != expected)
@@ -504,7 +504,7 @@ namespace SatorImaging.UnityFundamentals
 
         [UnityEditor.MenuItem("TEST/Minimal xxHash/Run Tests")]
         [MethodImpl(MethodImplOptions.NoOptimization)]
-        public static int UnityEditor_RunTests()
+        static int UnityEditor_RunTests()
         {
             _testNumber = 0;
 
