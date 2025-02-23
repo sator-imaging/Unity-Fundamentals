@@ -1,37 +1,27 @@
 {
   "name": "com.sator-imaging.unity-scripting-fundamentals",
-  "displayName": "Unity Scripting Fundamentals",
-  "version": "0.9.0",
+  "version": "1.0.0",
   "unity": "2021.3",
-  "description": "Scripting Library for Unity featuring Main Thread Dispatcher, CancellationToken based Object Lifetime Management, Unity \"Update\" Function Manager and Efficient Coroutine Runner.",
+  "displayName": "Unity Scripting Fundamentals",
+  "description": "Fundamental Scripting Library for Unity",
   "author": {
     "name": "Sator Imaging",
-    "url": "https://twitter.com/sator_imaging"
+    "url": "https://x.com/sator_imaging"
   },
   "category": "Unity",
   "keywords": [
     "unity",
     "scripting",
-    "fundamental",
-    "library",
-    "mainThread",
-    "dispatcher",
-    "cancellationToken",
-    "monoBehaviour",
-    "lifecycle",
-    "lifetime",
-    "updateManager",
-    "efficient",
-    "coroutine"
+    "fundamentals"
   ],
   "dependencies": {
   },
   "repository": {
     "type": "git",
-    "url":            "https://github.com/sator-imaging/Unity-LifecycleManager.git"
+    "url":            "https://github.com/sator-imaging/Unity-Fundamentals.git"
   },
-  "url":              "https://github.com/sator-imaging/Unity-LifecycleManager.git",
-  "documentationUrl": "https://sator-imaging.github.io/Unity-LifecycleManager",
-  "changelogUrl":     "https://github.com/sator-imaging/Unity-LifecycleManager.git",
+  "url":              "https://github.com/sator-imaging/Unity-Fundamentals.git",
+  "documentationUrl": "https://sator-imaging.github.io/Unity-Fundamentals/",
+  "changelogUrl":     "https://github.com/sator-imaging/Unity-Fundamentals.git",
   "licensesUrl":      "https://www.sator-imaging.com/"
 }
