@@ -29,12 +29,12 @@ Split string without allocation.
 
 
 ### Observable Action
-Transform `event Action<T>` to `IObservable<T>`.
-[📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/Reactive/ObservableAction.cs.html)
+Transform `event Action<T>` to `IObservable<T>`. Observable**Event** is recommended.
 
-
-### *WIP*: Unity Event Observable
-Transform `UnityEvent` to `IObservable<T>`.
+- `ObservableEvent<T>`
+  [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/Reactive/ObservableEvent.cs.html)
+- `ObservableAction<T>`
+  [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/Reactive/ObservableAction.cs.html)
 
 
 ### `Defer`
@@ -103,7 +103,12 @@ No need to use this anymore as unity asset store now accepts `package.json`.
 
 
 
-## Unity Runtime
+## Unity Runtime APIs
+
+### Observable `UnityEvent`
+Transform `UnityEvent` to `IObservable<T>`.
+[📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/Reactive/ObservableUnityEvent.cs.html)
+
 
 ### Nullable support for `UnityEngine.Object`
 Reliable nullable (`??` `?.` ~~`??=`~~) support for `UnityEngine.Object`.
@@ -140,7 +145,7 @@ And also there is option to delay event to correctly handle dropdown event.
 
 
 
-## Unity Editor
+## Unity Editor Scripts
 
 ### `UnityEditorMainToolbar`
 Provide access to `VisualElement` in Unity main toolbar.
