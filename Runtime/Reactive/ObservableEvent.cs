@@ -89,7 +89,12 @@ namespace SatorImaging.UnityFundamentals
             foreach (var cb in RawEvent.GetInvocationList())
             {
                 if (cb is not Action<T> act)
-                    continue;
+                {
+                    if (cb == null)
+                        continue;
+
+                    throw new NotSupportedException("unsupported event callback type: " + cb);
+                }
 
                 RawEvent -= act;
             }
