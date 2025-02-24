@@ -31,6 +31,7 @@ Technical Notes
 Prevent Allocation on Formatting Enum Types
 -------------------------------------------
 Install `StrictEnum` and set preprocessor symbol `STMG_USTRING_USE_STRICT_ENUM`.
+(on Unity, symbol is automatically set)
 
 Note that in .NET 8 or later version, `StrictEnum` is not required.
 
