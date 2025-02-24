@@ -67,23 +67,43 @@ namespace SatorImaging.UnityFundamentals
 
         /// <inheritdoc cref="BindTo{T}(IObservableAction{T}, CancellationToken, bool)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static CancellationTokenRegistration BindTo<T>(this in ObservableAction<T> self, CancellationToken cancellationToken, bool useSynchronizationContext = false)
+        public static CancellationTokenRegistration BindTo<T>(this in ObservableAction<T> self,
+                                                              CancellationToken cancellationToken,
+                                                              bool useSynchronizationContext = false)
         {
             return DisposeIfCanceled(self, cancellationToken, useSynchronizationContext);
         }
 
         /// <summary>Unsubscribe if token is canceled.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static CancellationTokenRegistration BindTo<T>(this IObservableAction<T> self, CancellationToken cancellationToken, bool useSynchronizationContext = false)
+        public static CancellationTokenRegistration BindTo<T>(this IObservableAction<T> self,
+                                                              CancellationToken cancellationToken,
+                                                              bool useSynchronizationContext = false)
         {
             return DisposeIfCanceled(self, cancellationToken, useSynchronizationContext);
         }
 
 
-        readonly static Action<object> InvokeDisposableDispose = static (obj) => ((IDisposable)obj).Dispose();
+        readonly static Action<object> InvokeDisposableDispose = static (obj) =>
+        {
+#if UNITY_EDITOR
+            try
+#endif
+            {
+                ((IDisposable)obj).Dispose();
+            }
+#if UNITY_EDITOR
+            catch (Exception exc)
+            {
+                UnityEngine.Debug.LogException(exc);
+            }
+#endif
+        };
 
         // don't make this method generic to achieve devirtualize. anyway it is boxed into object.
-        static CancellationTokenRegistration DisposeIfCanceled(IDisposable disposable, CancellationToken cancellationToken, bool useSynchronizationContext = false)
+        static CancellationTokenRegistration DisposeIfCanceled(IDisposable disposable,
+                                                               CancellationToken cancellationToken,
+                                                               bool useSynchronizationContext = false)
         {
             if (!cancellationToken.CanBeCanceled)
                 return default;
