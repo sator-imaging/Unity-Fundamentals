@@ -229,10 +229,10 @@ namespace SatorImaging.UnityFundamentals
 
         /// <summary>Get remaining milliseconds since start timestamp.</summary>
         /// <param name="startTimestamp">Use <see cref="Stopwatch.GetTimestamp"/>.</param>
-        public static int GetRemainingMilliseconds(long startTimestamp, int durationMilliseconds)
+        public static int GetRemainingMilliseconds(long startTimestamp, int waitDurationMilliseconds)
         {
             var elapsedTime = GetElapsedTime(startTimestamp);
-            return (int)(durationMilliseconds - elapsedTime.TotalMilliseconds);
+            return (int)(waitDurationMilliseconds - elapsedTime.TotalMilliseconds);
         }
 
 
