@@ -29,10 +29,11 @@ Split string without allocation.
 
 
 ### Observable Action
-Transform `event Action<T>` to `IObservable<T>`. Observable**Event** is recommended.
+Transform `event Action<T>` to `IObservable<T>`.
 
 - `ObservableEvent<T>`
   [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/Reactive/ObservableEvent.cs.html)
+  (recommended)
 - `ObservableAction<T>`
   [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/Reactive/ObservableAction.cs.html)
 
