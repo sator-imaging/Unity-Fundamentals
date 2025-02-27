@@ -172,7 +172,7 @@ namespace SatorImaging.UnityFundamentals
     {
         readonly short token;
 
-        internal SentinelToken(int token) => this.token = (short)token;
+        internal SentinelToken(int token) => this.token = checked((short)token);
 
         public static explicit operator SentinelToken(int token) => new(token);
         public static explicit operator short(SentinelToken self) => self.token;
