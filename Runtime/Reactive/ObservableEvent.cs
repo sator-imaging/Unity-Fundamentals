@@ -123,8 +123,9 @@ namespace SatorImaging.UnityFundamentals
             public override bool Equals(object? obj) => obj is Subscription other && this.Equals(other);
             public bool Equals(Subscription other)
             {
-                return EqualityComparer<ObservableEvent<T>>.Default.Equals(this.observable, other.observable)
-                    && EqualityComparer<Action<T>>.Default.Equals(this.act, other.act);
+                return EqualityComparer<Action<T>>.Default.Equals(this.act, other.act)
+                    && EqualityComparer<ObservableEvent<T>>.Default.Equals(this.observable, other.observable)
+                    ;
             }
             public static bool operator ==(Subscription left, Subscription right) => left.Equals(right);
             public static bool operator !=(Subscription left, Subscription right) => !(left == right);
