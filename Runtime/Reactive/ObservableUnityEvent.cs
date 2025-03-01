@@ -83,7 +83,7 @@ namespace SatorImaging.UnityFundamentals
                 }
             }
 
-            public IDisposable Subscribe(IObserver<T> observer) => new Observable<T>(target, (x) => observer.OnNext(x));
+            public IDisposable Subscribe(IObserver<T> observer) => new Observable<T>(target, observer.OnNext);
             public IDisposable Subscribe(UnityAction<T> act) => new Observable<T>(target, act);
 
             public void Dispose()
