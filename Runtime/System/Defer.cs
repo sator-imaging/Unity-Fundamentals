@@ -20,15 +20,25 @@ var span = rental.Value.AsSpan();
 using var _ = Defer.New(something.Value, (restore) => something.Value = restore);
 something.Value = tempValue;
 
-// 'using-block' example
+// ex) always rewind stream on exit
+using var _ = stream.Defer(stream => stream.Position = 0);
+
+// ex) achieve exlusive task using interlocked operation
+if (Interlocked.Exchange(ref _foo, 1) != 0) return;
+using var _ = Defer.New(() => Interlocked.Exchange(ref _foo, 0));
+```
+
+Note for use with `using` block statement.
+
+```cs
 var data = (name: "value tuple", value: 3.10f);
 using (data.Defer(static x => Console.WriteLine($"Disposed: {x.name} ({x.value}")))
 {
     Console.WriteLine("Disposing " + data.Value.name);
 }
 
-// note that 'data' still be accessible after disposed
-// block-less-using is recommended to make variable scope sync-ed
+// note that 'data' still be accessible after Dispose() is called
+// * block-less-using statement is recommended to make variable scope in sync
 data.value = -310;
 ```
 
@@ -46,8 +56,8 @@ namespace SatorImaging.UnityFundamentals
 {
     public static class Defer
     {
-        readonly static Action<Action> OnDispose = (act) => act.Invoke();
-        public static DeferredDisposable<Action> New(Action act) => new(act, OnDispose);
+        readonly static Action<Action> InvokeAction = (act) => act.Invoke();
+        public static DeferredDisposable<Action> New(Action act) => new(act, InvokeAction);
 
         public static DeferredDisposable<T> New<T>(T state, Action<T> act) => new(state, act);
 
