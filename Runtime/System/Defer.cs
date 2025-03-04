@@ -17,7 +17,7 @@ using var rental = ArrayPool<byte>.Shared.Rent(256)
 var span = rental.Value.AsSpan();
 
 // create Defer action from scratch
-using var _ = Defer.New(restore, static (restore) => something.Value = restore);
+using var _ = Defer.New(something.Value, (restore) => something.Value = restore);
 something.Value = tempValue;
 
 // 'using-block' example
