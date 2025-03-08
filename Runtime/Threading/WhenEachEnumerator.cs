@@ -5,11 +5,18 @@
 How to Use
 ==========
 ```cs
-// available for Task[], ReadOnlySpan<Task>, ICollection<Task> and IEnumerable<Task>
 await foreach (var task in tasks.WhenEach())
 {
     // do something for completed task
 }
+
+// for efficiency, cancellation token should be passed to WhenEach() directly.
+// note that cancellation affects only on enumeration. jobs may continue running
+// if those are depending on different token.
+await foreach (var task in tasks.WhenEach(ct)) { }
+
+// WithCancellation() creates new struct so a little bit inefficient.
+await foreach (var task in tasks.WhenEach().WithCancellation(ct)) { }
 ```
 
  */
@@ -21,6 +28,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -37,22 +45,31 @@ namespace SatorImaging.UnityFundamentals
     /// </summary>
     public static class WhenEachEnumeratorExtensions
     {
+        /// <inheritdoc cref="WhenEachEnumerator{T}"/>
         public static WhenEachEnumerator<T> WhenEach<T>(this T[] tasks, CancellationToken cancellationToken = default)
+            where T : Task => new(tasks.AsSpan(), cancellationToken);
+
+        /// <inheritdoc cref="WhenEachEnumerator{T}"/>
+        public static WhenEachEnumerator<T> WhenEach<T>(this Span<T> tasks, CancellationToken cancellationToken = default)
             where T : Task => new(tasks, cancellationToken);
 
+        /// <inheritdoc cref="WhenEachEnumerator{T}"/>
         public static WhenEachEnumerator<T> WhenEach<T>(this ReadOnlySpan<T> tasks, CancellationToken cancellationToken = default)
             where T : Task => new(tasks, cancellationToken);
 
+        /// <inheritdoc cref="WhenEachEnumerator{T}"/>
         public static WhenEachEnumerator<T> WhenEach<T>(this ICollection<T> tasks, CancellationToken cancellationToken = default)
             where T : Task => new(tasks, cancellationToken);
 
+        /// <inheritdoc cref="WhenEachEnumerator{T}"/>
         public static WhenEachEnumerator<T> WhenEach<T>(this IEnumerable<T> tasks, CancellationToken cancellationToken = default)
             where T : Task => new(tasks, cancellationToken);
     }
 
 
     /// <summary>
-    /// <c>Task.WhenEach</c> for Unity / .NET Standard 2.1
+    /// > [!IMPORTANT]
+    /// > Supports up to 256 tasks otherwise throws <see cref="OverflowException"/>.
     /// </summary>
     [StructLayout(LayoutKind.Auto)]
     public readonly struct WhenEachEnumerator<T>
@@ -74,11 +91,10 @@ namespace SatorImaging.UnityFundamentals
             }
 
             this.remaining[0] = checked((byte)length);
-            this.tasks = ArrayPool<T>.Shared.Rent(length);  // must be done after bounds check
+            this.tasks = length <= 0 ? Array.Empty<T>() : ArrayPool<T>.Shared.Rent(length);  // must be done after bounds check
             this.ct = ct;
         }
 
-        public WhenEachEnumerator(T[] array, CancellationToken ct) : this(array.Length, ct) => array.AsSpan().CopyTo(this.tasks);
         public WhenEachEnumerator(ReadOnlySpan<T> span, CancellationToken ct) : this(span.Length, ct) => span.CopyTo(this.tasks);
         public WhenEachEnumerator(ICollection<T> collection, CancellationToken ct) : this(collection.Count, ct) => collection.CopyTo(this.tasks, 0);
 
@@ -105,13 +121,13 @@ namespace SatorImaging.UnityFundamentals
 
             if (isOverflow)
             {
-                ArrayPool<T>.Shared.Return(this.tasks, clearArray: true);  // must clear!
+                ReturnRentalArray();
 
                 // throw after returning rental array
                 if (length > byte.MaxValue)
                 {
-                    cache_remaining.Push(this.remaining);
-                    throw new ArgumentOutOfRangeException("so many tasks: " + length);
+                    DisposeCore();
+                    throw new OverflowException("so many tasks: " + length);  // should not throw overflowException. but, okay.
                 }
 
                 this.tasks = ArrayPool<T>.Shared.Rent(length);
@@ -123,22 +139,37 @@ namespace SatorImaging.UnityFundamentals
         }
 
 
-        public async ValueTask DisposeAsync()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void ReturnRentalArray()
+        {
+            if (this.tasks.Length != 0)
+            {
+                ArrayPool<T>.Shared.Return(this.tasks, clearArray: true);  // must clear!
+            }
+        }
+
+        void DisposeCore()
         {
             this.remaining[0] = 0;
 
-            ArrayPool<T>.Shared.Return(this.tasks, clearArray: true);  // must clear!
+            ReturnRentalArray();
             cache_remaining.Push(this.remaining);
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            DisposeCore();
         }
 
 
         public IAsyncEnumerator<T> GetAsyncEnumerator() => this;
         public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken ct)
         {
-            var backup = this.tasks;
-            this.DisposeAsync();
+            // NOTE: array may different size from actual count of tasks. slice it!!
+            var result = new WhenEachEnumerator<T>(this.tasks.AsSpan(0, this.remaining[0]), ct);
 
-            return new WhenEachEnumerator<T>(backup, ct);
+            DisposeCore();
+            return result;
         }
 
 
@@ -215,54 +246,153 @@ namespace SatorImaging.UnityFundamentals.TEST.WhenEach_Enumerator  // must be un
             // TEST: write test code here
             //       > 'Assert.That(..., Is/Throws)' can be used
 
+            // cannot run simlutaneously, because of cancellation tests
             _ = Task.Run(async () =>
             {
-                var rng = new Random();
-                var jobInfo = new[] {
-                    (1, rng.Next(310, 3100)),
-                    (2, rng.Next(310, 3100)),
-                    (3, rng.Next(310, 3100)),
-                };
-                var expect = jobInfo.OrderBy(x => x.Item2).ToArray();
-
-                var tasks = new Task<int>[jobInfo.Length];
-                for (int i = 0; i < jobInfo.Length; i++)
-                {
-                    var info = jobInfo[i];
-                    tasks[i] = SimpleJob(info.Item1, info.Item2);
-                }
-
-                var start = Stopwatch.GetTimestamp();
-                UnityEngine.Debug.Log("= WhenEachEnumerator ===");
-
-                int e = -1;
-                await foreach (var task in tasks.WhenEach())
-                {
-                    e++;
-                    // assertion doesn't show error if runs in thread pool...!
-                    if (task.Result != expect[e].Item1)
-                    {
-                        var msg = $"[FAILED] Expect: {expect[e].Item1} / Actual: {task.Result}";
-                        UnityEngine.Debug.LogError(msg);
-                        throw new Exception(msg);
-                    }
-
-                    var elapsedMillis = TimeSpan.FromTicks((long)((Stopwatch.GetTimestamp() - start) * ((double)TimeSpan.TicksPerSecond / Stopwatch.Frequency))).TotalMilliseconds;
-                    UnityEngine.Debug.Log($"-> {task.Result}: " + elapsedMillis);
-                }
+                await Test(0);
+                await Test(1);
+                await Test(2);
             });
 
 
             // TEST: done!!
             UnityEngine.Debug.Log("[TEST] Completed Successfully!!");
+
+
+            /* =====  methods  ===== */
+
+            static Task Test(int mode)
+            {
+                return Task.Run(async () =>
+                {
+                    try
+                    {
+                        var rng = new Random();
+                        var jobInfo = new[] {
+                            (1, rng.Next(310, 3100) + 1000),
+                            (2, rng.Next(310, 3100) + 1000),
+                            (3, rng.Next(310, 3100) + 1000),
+                        };
+
+                        // to make test stable, shuffle job number but delay keeps consistent
+                        int n = 310;
+                        var expect = jobInfo.OrderBy(x => x.Item2).Select(x => (x.Item1, 310 * n++)).ToArray();
+
+                        var cts = new CancellationTokenSource();
+
+                        var tasks = new Task<int>[jobInfo.Length];
+                        for (int i = 0; i < jobInfo.Length; i++)
+                        {
+                            var info = jobInfo[i];
+                            tasks[i] = SimpleJob(info.Item1, info.Item2, cts);
+                        }
+
+                        var startTimestamp = Stopwatch.GetTimestamp();
+                        UnityEngine.Debug.Log("= WhenEachEnumerator ===");
+
+                        int e = -1;
+                        int expectedCompletionCount;
+                        switch (mode)
+                        {
+                            case 0:
+                                await foreach (var task in tasks.WhenEach())
+                                {
+                                    e++;
+                                    Report(startTimestamp, expect[e].Item1, task.Result);
+
+                                    cts.Cancel();
+                                }
+
+                                e++;
+                                CheckCompletedTaskCount(3, e);
+
+                                break;
+
+                            case 1:
+                                await foreach (var task in tasks.WhenEach(cts.Token))
+                                {
+                                    e++;
+                                    Report(startTimestamp, expect[e].Item1, task.Result);
+
+                                    cts.Cancel();
+                                }
+
+                                e++;
+                                CheckCompletedTaskCount(1, e);
+
+                                break;
+
+                            case 2:
+                                await foreach (var task in tasks.WhenEach().WithCancellation(cts.Token))
+                                {
+                                    e++;
+                                    Report(startTimestamp, expect[e].Item1, task.Result);
+
+                                    cts.Cancel();
+                                }
+
+                                e++;
+                                CheckCompletedTaskCount(1, e);
+
+                                break;
+                        }
+
+                        UnityEngine.Debug.Log("DONE");
+                    }
+                    catch (Exception exc)
+                    {
+                        UnityEngine.Debug.LogException(exc);
+                    }
+                });
+            }
+
+            static void Report(long startTimestamp, int expect, int actual)
+            {
+                // assertion doesn't show error if runs in thread pool...!
+                if (actual != expect)
+                {
+                    throw new Exception($"Expect: {expect} / Actual: {actual}");
+                }
+
+                var elapsedMillis = TimeSpan.FromTicks((long)((Stopwatch.GetTimestamp() - startTimestamp) * ((double)TimeSpan.TicksPerSecond / Stopwatch.Frequency))).TotalMilliseconds;
+                UnityEngine.Debug.Log($"-> {actual}: " + elapsedMillis);
+            }
+
+            static void CheckCompletedTaskCount(int expect, int actual)
+            {
+                if (expect != actual)
+                {
+                    throw new Exception($"Completed task count is not {expect}: {actual}");
+                }
+            }
+
+            static async Task<int> SimpleJob(int jobNumber, int delay, CancellationTokenSource cts)
+            {
+                await Task.Delay(delay);
+                UnityEngine.Debug.Log($"No.{jobNumber}: {delay} ms");
+
+                return jobNumber;
+            }
         }
 
 
-        static async Task<int> SimpleJob(int jobNumber, int delay)
+
+        [UnityEditor.MenuItem(MENU_ROOT + nameof(Error_Tests), priority = 0)]
+        [Test]
+        static void Error_Tests()
         {
-            await Task.Delay(delay);
-            UnityEngine.Debug.Log($"No.{jobNumber}: {delay} ms");
-            return jobNumber;
+            // TEST: write test code here
+            //       > 'Assert.That(..., Is/Throws)' can be used
+
+            var tasks = new Task[257];
+            Assert.That(() => tasks.WhenEach(), Throws.TypeOf<OverflowException>());
+            Assert.That(() => tasks.AsSpan().WhenEach(), Throws.TypeOf<OverflowException>());
+            Assert.That(() => tasks.ToList().WhenEach(), Throws.TypeOf<OverflowException>());
+            Assert.That(() => tasks.AsEnumerable().WhenEach(), Throws.TypeOf<OverflowException>());
+
+
+            // TEST: done!!
+            UnityEngine.Debug.Log("[TEST] Completed Successfully!!");
         }
 
 
