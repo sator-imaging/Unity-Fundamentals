@@ -1,4 +1,4 @@
-/** `WhenEach` for Unity / .NET Standard 2.1
+/** `Task.WhenEach` for Unity / .NET Standard 2.1
  ** (c) 2025 Sator Imaging, Licensed under the MIT License
  ** https://github.com/sator-imaging/Unity-Fundamentals
 

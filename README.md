@@ -38,6 +38,11 @@ Transform `event Action<T>` to `IObservable<T>`.
   [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/Reactive/ObservableAction.cs.html)
 
 
+### `WhenEachEnumerator`
+`Task.WhenEach` for Unity / .NET Standard 2.1
+[📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/Threading/WhenEachEnumerator.cs.html)
+
+
 ### `Defer`
 Providing function for `early-finally` pattern.
 [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/System/Defer.cs.html)
