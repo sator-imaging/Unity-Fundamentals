@@ -26,6 +26,30 @@ if (rejected)
 ```
 
 
+Async Callback Handling
+-----------------------
+Even if callback is invoked only on main thread, event handler may run multiple times if it is marked `async`.
+(ex. multiple button clicks may invoke multiple callbacks)
+
+Here shows how to prevent multiple event invocations in single thread app.
+
+```cs
+// technically, async method is immediately finished so there is chance to run multiple times
+myEvent.Subscribe(async () =>
+{
+    using (Sentinel.SingleThreadScope(_token, out var entrantCount)
+    {
+        // check current entrant count
+        if (entrantCount != 0)
+            return;
+
+        await FooAsync();
+        await Task.Delay(1000);
+    }
+});
+```
+
+
 Advanced Usage
 ==============
 `Sentinel` providing features to eliminate insane Rx operator chains.
@@ -121,39 +145,71 @@ RETRY_ENTER:
 
 Extendable Delay Operation
 --------------------------
-Here shows how to achieve 'extendable wait' in UI events or multi-threaded apps.
+Here shows how to achieve "extendable wait" in UI events or multi-threaded functions.
 (ex. invoke callback after a second since slider dragging is finished)
 
 ```cs
+private int m_waitDuration;
+private int m_latestValue;
+
+// event/thread always updates wait duration even if cannot enter exclusive block to
+// prevent event invocation. as a result, event listener invokes only once when a second
+// elapsed since last event arrival.
+void OnChanged(int value)
+{
+    // always set!!
+    m_waitDuration = 1000;
+    m_latestValue = value;
+
+    using (Sentinel.ExclusiveScope(_token, out var rejected)
+    {
+        if (rejected) return;
+
+        // check frequency in milliseconds
+        const int freq = 100;
+
+        // this delay continues until event stream stops.
+        int remaining;
+        while ((remaining = m_waitDuration - freq) > 0)
+        {
+            await Task.Delay(remaining, ct).ConfigureAwait(false);
+        }
+
+        // reaches here a second later since last event.
+        DelayedAction(m_latestValue);
+    }
+}
+```
+
+
+`Sentinel` provides helper method to achieve more accurate delay.
+
+```cs
+// use timestamp instead of wait duration
 private long m_startTimestamp;
 
-// some thread or UI event updates timestamp to extend delay duration
-m_startTimestamp = Stopwatch.GetTimestamp();
-
-// in change event listening thread, repeat delay until time has elapsed
+// in event listener, repeat delay until time has elapsed
 int remaining;
 while ((remaining = Sentinel.GetRemainingMilliseconds(m_startTimestamp, 1000)) > 0)
 {
     await Task.Delay(remaining, ct).ConfigureAwait(false);
 }
-
-// reaches here in a second later since last operation finished
-DelayedOperation();
 ```
 
 
 Technical Notes
 ===============
 If you have encountered error related on `SentinelToken`, define preprocessor directive
-`#define THREAD_SENTINEL_ENABLE_STRICT_TYPEDEF` can solve the problem.
+`#define STMG_SENTINEL_ENABLE_STRICT_TYPEDEF` can solve the problem.
 
  */
 
-//#define THREAD_SENTINEL_ENABLE_STRICT_TYPEDEF
+//#define STMG_SENTINEL_ENABLE_STRICT_TYPEDEF
 
 using NUnit.Framework;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -166,7 +222,7 @@ using System.Threading.Tasks;
 namespace SatorImaging.UnityFundamentals
 {
 
-#if THREAD_SENTINEL_ENABLE_STRICT_TYPEDEF
+#if STMG_SENTINEL_ENABLE_STRICT_TYPEDEF
     [StructLayout(LayoutKind.Auto)]
     public readonly struct SentinelToken
     {
@@ -217,21 +273,16 @@ namespace SatorImaging.UnityFundamentals
 
         /*  helpers  ================================================================ */
 
-        readonly static double TICK_FREQUENCY = (double)TimeSpan.TicksPerSecond / Stopwatch.Frequency;
-
-        /// <param name="startTimestamp">Use <see cref="Stopwatch.GetTimestamp"/>.</param>
-        public static TimeSpan GetElapsedTime(long startTimestamp)
-        {
-            var now = Stopwatch.GetTimestamp();
-            return new TimeSpan((long)((now - startTimestamp) * TICK_FREQUENCY));
-        }
-
+        // https://github.com/dotnet/runtime/blob/v9.0.2/src/libraries/Microsoft.Extensions.Http/src/ValueStopwatch.cs#L11
+        readonly static double s_timestampToTicks = TimeSpan.TicksPerSecond / (double)Stopwatch.Frequency;
 
         /// <summary>Get remaining milliseconds since start timestamp.</summary>
-        /// <param name="startTimestamp">Use <see cref="Stopwatch.GetTimestamp"/>.</param>
-        public static int GetRemainingMilliseconds(long startTimestamp, int waitDurationMilliseconds)
+        /// <param name="startingTimestamp">Use <see cref="Stopwatch.GetTimestamp"/>.</param>
+        /// <returns>may be negative value</returns>
+        public static int GetRemainingMilliseconds(long startingTimestamp, int waitDurationMilliseconds)
         {
-            var elapsedTime = GetElapsedTime(startTimestamp);
+            var now = Stopwatch.GetTimestamp();
+            var elapsedTime = new TimeSpan((long)((now - startingTimestamp) * s_timestampToTicks));
             return (int)(waitDurationMilliseconds - elapsedTime.TotalMilliseconds);
         }
 
@@ -340,6 +391,48 @@ namespace SatorImaging.UnityFundamentals
 
                 Interlocked.Decrement(ref state.Count);
             }
+        }
+
+
+        /*  single thread operations  ================================================================ */
+
+        internal sealed class SingleThreadState
+        {
+            public byte Count;
+        }
+        readonly static Dictionary<short, SingleThreadState> sentinel_singleThread = new();
+
+        /// <summary>
+        /// > [!NOTE]
+        /// > This method won't perform interlocked increment/decrement operation.
+        /// </summary>
+        public static SingleThreadDisposable SingleThreadScope(SentinelToken token, out byte currentEntrantCount)
+        {
+            var key = (short)token;
+            var dict = sentinel_singleThread;
+
+            if (!dict.TryGetValue(key, out var state))
+            {
+                state = new();
+                dict.Add(key, state);
+            }
+
+            currentEntrantCount = state.Count;
+
+            checked
+            {
+                state.Count++;
+            }
+            return new(state);
+        }
+
+
+        [StructLayout(LayoutKind.Auto)]
+        public readonly struct SingleThreadDisposable : IDisposable
+        {
+            readonly SingleThreadState state;
+            internal SingleThreadDisposable(SingleThreadState state) => this.state = state;
+            public void Dispose() => --state.Count;
         }
 
 
