@@ -142,14 +142,24 @@ namespace SatorImaging.UnityFundamentals
 
         /*  shutdown  ================================================================ */
 
-        readonly static double TICK_FREQUENCY = (double)TimeSpan.TicksPerSecond / Stopwatch.Frequency;
-
-        /// <param name="startTimestamp">Use <see cref="Stopwatch.GetTimestamp"/>.</param>
-        public static TimeSpan GetElapsedTime(long startTimestamp)
+        #region  GetElapsedTime(long) & GetElapsedTime(long, long)
+        // https://github.com/dotnet/runtime/blob/v9.0.2/src/libraries/Microsoft.Extensions.Http/src/ValueStopwatch.cs#L11
+        readonly static double s_timestampToTicks = System.TimeSpan.TicksPerSecond / (double)System.Diagnostics.Stopwatch.Frequency;
+        /// <param name="startingTimestamp">Use <see cref="System.Diagnostics.Stopwatch.GetTimestamp"/>.</param>
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.TimeSpan GetElapsedTime(long startingTimestamp)
         {
-            var now = Stopwatch.GetTimestamp();
-            return new TimeSpan((long)((now - startTimestamp) * TICK_FREQUENCY));
+            long endingTimestamp = Stopwatch.GetTimestamp();
+            return new System.TimeSpan((long)((endingTimestamp - startingTimestamp) * s_timestampToTicks));
         }
+        /// <param name="startingTimestamp">Use <see cref="System.Diagnostics.Stopwatch.GetTimestamp"/>.</param>
+        /// <param name="endingTimestamp">Use <see cref="System.Diagnostics.Stopwatch.GetTimestamp"/>.</param>
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.TimeSpan GetElapsedTime(long startingTimestamp, long endingTimestamp)
+        {
+            return new System.TimeSpan((long)((endingTimestamp - startingTimestamp) * s_timestampToTicks));
+        }
+        #endregion
 
 
         /// <summary>
