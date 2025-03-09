@@ -169,10 +169,9 @@ void OnChanged(int value)
         const int freq = 100;
 
         // this delay continues until event stream stops.
-        int remaining;
-        while ((remaining = m_waitDuration - freq) > 0)
+        while ((m_waitDuration -= freq) > 0)
         {
-            await Task.Delay(remaining, ct).ConfigureAwait(false);
+            await Task.Delay(freq, ct).ConfigureAwait(false);
         }
 
         // reaches here a second later since last event.
