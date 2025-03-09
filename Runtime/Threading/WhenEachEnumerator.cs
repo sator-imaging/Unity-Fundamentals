@@ -24,7 +24,6 @@ await foreach (var task in tasks.WhenEach().WithCancellation(ct)) { }
 using NUnit.Framework;
 using System;
 using System.Buffers;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -77,7 +76,7 @@ namespace SatorImaging.UnityFundamentals
         , IAsyncEnumerable<T>
         where T : Task
     {
-        readonly static ConcurrentStack<byte[]> cache_remaining = new();
+        [ThreadStatic] static byte[]? ts_remaining;
 
         readonly T[] tasks;
         readonly byte[] remaining;  // need to use array to make struct readonly
@@ -85,10 +84,8 @@ namespace SatorImaging.UnityFundamentals
 
         WhenEachEnumerator(int length, CancellationToken ct)
         {
-            if (!cache_remaining.TryPop(out remaining))
-            {
-                remaining = new byte[length];
-            }
+            this.remaining = ts_remaining ?? new byte[1];
+            ts_remaining = null;
 
             this.remaining[0] = checked((byte)length);
             this.tasks = length <= 0 ? Array.Empty<T>() : ArrayPool<T>.Shared.Rent(length);  // must be done after bounds check
@@ -153,7 +150,7 @@ namespace SatorImaging.UnityFundamentals
             this.remaining[0] = 0;
 
             ReturnRentalArray();
-            cache_remaining.Push(this.remaining);
+            ts_remaining = this.remaining;
         }
 
         public async ValueTask DisposeAsync()
@@ -275,8 +272,7 @@ namespace SatorImaging.UnityFundamentals.TEST.WhenEach_Enumerator  // must be un
                         };
 
                         // to make test stable, shuffle job number but delay keeps consistent
-                        int n = 310;
-                        var expect = jobInfo.OrderBy(x => x.Item2).Select(x => (x.Item1, 310 * n++)).ToArray();
+                        var expect = jobInfo.OrderBy(x => x.Item2).Select(x => (x.Item1, 1000 + 1000 * mode)).ToArray();
 
                         var cts = new CancellationTokenSource();
 
