@@ -746,9 +746,12 @@ namespace SatorImaging.UnityFundamentals
             try
             {
                 const int STACKALLOC_THRESHOLD = 160;
-                Span<char> source = (maxPossibleLength <= STACKALLOC_THRESHOLD) ? stackalloc char[maxPossibleLength] : Array.Empty<char>();
-                Span<char> result = (maxPossibleLength <= STACKALLOC_THRESHOLD) ? stackalloc char[maxPossibleLength] : Array.Empty<char>();
-                if (maxPossibleLength > STACKALLOC_THRESHOLD)
+                bool useStack = maxPossibleLength <= STACKALLOC_THRESHOLD;
+
+                // stackalloc must be called in Span<char> initializer
+                Span<char> source = useStack ? stackalloc char[maxPossibleLength] : Array.Empty<char>();
+                Span<char> result = useStack ? stackalloc char[maxPossibleLength] : Array.Empty<char>();
+                if (!useStack)
                 {
                     source_array = ArrayPool<char>.Shared.Rent(maxPossibleLength);
                     result_array = ArrayPool<char>.Shared.Rent(maxPossibleLength);
