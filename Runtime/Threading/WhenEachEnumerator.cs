@@ -10,9 +10,15 @@ await foreach (var task in tasks.WhenEach())
     // do something for completed task
 }
 
+// can perform strictly typed enumeration
+await foreach (var task in new WhenEachEnumerator<Task<int>>(tasks))
+{
+    Console.WriteLine(task.Result);
+}
+
 // for efficiency, cancellation token should be passed to WhenEach() directly.
-// note that cancellation affects only on enumeration. jobs may continue running
-// if those are depending on different token.
+// note that cancellation affects only on enumeration.
+// jobs may continue running if those are depending on different token.
 await foreach (var task in tasks.WhenEach(ct)) { }
 
 // WithCancellation() creates new struct so a little bit inefficient.
@@ -27,7 +33,6 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -35,7 +40,7 @@ using Random = System.Random;
 
 #nullable enable
 
-#if NET9_0 == false
+//#if NET9_0 == false
 
 namespace SatorImaging.UnityFundamentals
 {
@@ -44,51 +49,57 @@ namespace SatorImaging.UnityFundamentals
     /// </summary>
     public static class WhenEachEnumeratorExtensions
     {
-        /// <inheritdoc cref="WhenEachEnumerator{T}"/>
-        public static WhenEachEnumerator<T> WhenEach<T>(this T[] tasks, CancellationToken cancellationToken = default)
-            where T : Task => new(tasks.AsSpan(), cancellationToken);
+        ///// <inheritdoc cref="WhenEachEnumerator{T}"/>
+        //public static WhenEachEnumerator<T> WhenEach<T>(this T[] tasks, CancellationToken cancellationToken = default)
+        //    where T : Task => new(tasks.AsSpan(), cancellationToken);
+
+        ///// <inheritdoc cref="WhenEachEnumerator{T}"/>
+        //public static WhenEachEnumerator<T> WhenEach<T>(this Span<T> tasks, CancellationToken cancellationToken = default)
+        //    where T : Task => new(tasks, cancellationToken);
+
+        ///// <inheritdoc cref="WhenEachEnumerator{T}"/>
+        //public static WhenEachEnumerator<T> WhenEach<T>(this ReadOnlySpan<T> tasks, CancellationToken cancellationToken = default)
+        //    where T : Task => new(tasks, cancellationToken);
+
 
         /// <inheritdoc cref="WhenEachEnumerator{T}"/>
-        public static WhenEachEnumerator<T> WhenEach<T>(this Span<T> tasks, CancellationToken cancellationToken = default)
+        public static WhenEachEnumerator<Task> WhenEach<T>(this ICollection<T> tasks, CancellationToken cancellationToken = default)
             where T : Task => new(tasks, cancellationToken);
 
         /// <inheritdoc cref="WhenEachEnumerator{T}"/>
-        public static WhenEachEnumerator<T> WhenEach<T>(this ReadOnlySpan<T> tasks, CancellationToken cancellationToken = default)
-            where T : Task => new(tasks, cancellationToken);
-
-        /// <inheritdoc cref="WhenEachEnumerator{T}"/>
-        public static WhenEachEnumerator<T> WhenEach<T>(this ICollection<T> tasks, CancellationToken cancellationToken = default)
-            where T : Task => new(tasks, cancellationToken);
-
-        /// <inheritdoc cref="WhenEachEnumerator{T}"/>
-        public static WhenEachEnumerator<T> WhenEach<T>(this IEnumerable<T> tasks, CancellationToken cancellationToken = default)
+        public static WhenEachEnumerator<Task> WhenEach<T>(this IEnumerable<T> tasks, CancellationToken cancellationToken = default)
             where T : Task => new(tasks, cancellationToken);
     }
 
 
-    /// <summary>
-    /// > [!IMPORTANT]
-    /// > Supports up to 256 tasks otherwise throws <see cref="OverflowException"/>.
-    /// </summary>
     [StructLayout(LayoutKind.Auto)]
     public readonly struct WhenEachEnumerator<T>
         : IAsyncEnumerator<T>
         , IAsyncEnumerable<T>
         where T : Task
     {
-        [ThreadStatic] static byte[]? ts_remaining;
+        internal const int DEFAULT_ENUMERABLE_COUNT = 16;
+
+        [ThreadStatic] static int[]? ts_remaining;
 
         readonly T[] tasks;
-        readonly byte[] remaining;  // need to use array to make struct readonly
+        readonly int[] remaining;  // need to use array to make struct readonly
         readonly CancellationToken ct;
 
         WhenEachEnumerator(int length, CancellationToken ct)
         {
-            this.remaining = ts_remaining ?? new byte[1];
-            ts_remaining = null;
+            if (ts_remaining == null)
+            {
+                this.remaining = new int[1];
+            }
+            else
+            {
+                this.remaining = ts_remaining;
+                ts_remaining = null;
+            }
 
-            this.remaining[0] = checked((byte)length);
-            this.tasks = length <= 0 ? Array.Empty<T>() : ArrayPool<T>.Shared.Rent(length);  // must be done after bounds check
+            this.remaining[0] = length;
+            this.tasks = length == 0 ? Array.Empty<T>() : ArrayPool<T>.Shared.Rent(length);
             this.ct = ct;
         }
 
@@ -96,60 +107,47 @@ namespace SatorImaging.UnityFundamentals
         public WhenEachEnumerator(ICollection<T> collection, CancellationToken ct) : this(collection.Count, ct) => collection.CopyTo(this.tasks, 0);
 
         public WhenEachEnumerator(IEnumerable<T> enumerable, CancellationToken ct)
-            : this(16, ct)  // NOTE: first, try with enough size in most cases.
-                            //       if larger, return rental buffer and retry with actual size.
+            : this(DEFAULT_ENUMERABLE_COUNT, ct)  // NOTE: first, try with enough size for most cases.
+                                                  //       if larger, return rental buffer and retry with actual size.
         {
         RETRY:
-            bool isOverflow = false;
             int lastIndex = this.tasks.Length - 1;
 
-            int length = -1;
+            int currentIndex = -1;
             foreach (var task in enumerable)
             {
-                length++;
-                if (length > lastIndex)
+                currentIndex++;
+                if (currentIndex > lastIndex)
                 {
-                    isOverflow = true;
                     continue;  // don't break here! continue counting up!!
                 }
 
-                this.tasks[length] = task;
+                this.tasks[currentIndex] = task;
             }
 
-            if (isOverflow)
+            int totalCount = currentIndex + 1;
+            if (currentIndex > lastIndex)
             {
-                ReturnRentalArray();
+                DisposeCore();
 
-                // throw after returning rental array
-                if (length > byte.MaxValue)
-                {
-                    DisposeCore();
-                    throw new OverflowException("so many tasks: " + length);  // should not throw overflowException. but, okay.
-                }
-
-                this.tasks = ArrayPool<T>.Shared.Rent(length);
+                this.tasks = ArrayPool<T>.Shared.Rent(totalCount);
                 goto RETRY;
             }
 
-            this.remaining[0] = checked((byte)length);
+            this.remaining[0] = totalCount;
             this.ct = ct;
         }
 
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void ReturnRentalArray()
-        {
-            if (this.tasks.Length != 0)
-            {
-                ArrayPool<T>.Shared.Return(this.tasks, clearArray: true);  // must clear!
-            }
-        }
 
         void DisposeCore()
         {
             this.remaining[0] = 0;
 
-            ReturnRentalArray();
+            if (this.tasks.Length != 0)
+            {
+                ArrayPool<T>.Shared.Return(this.tasks, clearArray: true);  // must clear!
+            }
+
             ts_remaining = this.remaining;
         }
 
@@ -246,17 +244,25 @@ namespace SatorImaging.UnityFundamentals.TEST.WhenEach_Enumerator  // must be un
             // cannot run simlutaneously, because of cancellation tests
             _ = Task.Run(async () =>
             {
-                await Test(0);
-                await Test(1);
-                await Test(2);
+                try
+                {
+                    await Test(0);
+                    await Test(1);
+                    await Test(2);
+                }
+                catch (Exception exc)
+                {
+                    UnityEngine.Debug.LogException(exc);
+                    throw;
+                }
+
+
+                // TEST: done!!
+                UnityEngine.Debug.Log("[TEST] Completed Successfully!!");
             });
 
 
-            // TEST: done!!
-            UnityEngine.Debug.Log("[TEST] Completed Successfully!!");
-
-
-            /* =====  methods  ===== */
+            /* =====  nested methods  ===== */
 
             static Task Test(int mode)
             {
@@ -266,13 +272,14 @@ namespace SatorImaging.UnityFundamentals.TEST.WhenEach_Enumerator  // must be un
                     {
                         var rng = new Random();
                         var jobInfo = new[] {
-                            (1, rng.Next(310, 3100) + 1000),
-                            (2, rng.Next(310, 3100) + 1000),
-                            (3, rng.Next(310, 3100) + 1000),
-                        };
-
+                            (1, rng.Next(310, 3100)),
+                            (2, rng.Next(310, 3100)),
+                            (3, rng.Next(310, 3100)),
+                        }
                         // to make test stable, shuffle job number but delay keeps consistent
-                        var expect = jobInfo.OrderBy(x => x.Item2).Select(x => (x.Item1, 1000 + 1000 * mode)).ToArray();
+                        .OrderBy(x => x.Item2)
+                        .Select((x, i) => (x.Item1, 1000 + 1000 * i))
+                        .ToArray();
 
                         var cts = new CancellationTokenSource();
 
@@ -291,10 +298,10 @@ namespace SatorImaging.UnityFundamentals.TEST.WhenEach_Enumerator  // must be un
                         switch (mode)
                         {
                             case 0:
-                                await foreach (var task in tasks.WhenEach())
+                                await foreach (Task<int> task in tasks.WhenEach())
                                 {
                                     e++;
-                                    Report(startTimestamp, expect[e].Item1, task.Result);
+                                    Report(startTimestamp, jobInfo[e].Item1, task.Result);
 
                                     cts.Cancel();
                                 }
@@ -305,10 +312,10 @@ namespace SatorImaging.UnityFundamentals.TEST.WhenEach_Enumerator  // must be un
                                 break;
 
                             case 1:
-                                await foreach (var task in tasks.WhenEach(cts.Token))
+                                await foreach (Task<int> task in tasks.WhenEach(cts.Token))
                                 {
                                     e++;
-                                    Report(startTimestamp, expect[e].Item1, task.Result);
+                                    Report(startTimestamp, jobInfo[e].Item1, task.Result);
 
                                     cts.Cancel();
                                 }
@@ -319,10 +326,10 @@ namespace SatorImaging.UnityFundamentals.TEST.WhenEach_Enumerator  // must be un
                                 break;
 
                             case 2:
-                                await foreach (var task in tasks.WhenEach().WithCancellation(cts.Token))
+                                await foreach (Task<int> task in tasks.WhenEach().WithCancellation(cts.Token))
                                 {
                                     e++;
-                                    Report(startTimestamp, expect[e].Item1, task.Result);
+                                    Report(startTimestamp, jobInfo[e].Item1, task.Result);
 
                                     cts.Cancel();
                                 }
@@ -338,6 +345,7 @@ namespace SatorImaging.UnityFundamentals.TEST.WhenEach_Enumerator  // must be un
                     catch (Exception exc)
                     {
                         UnityEngine.Debug.LogException(exc);
+                        throw;
                     }
                 });
             }
@@ -380,15 +388,71 @@ namespace SatorImaging.UnityFundamentals.TEST.WhenEach_Enumerator  // must be un
             // TEST: write test code here
             //       > 'Assert.That(..., Is/Throws)' can be used
 
-            var tasks = new Task[257];
-            Assert.That(() => tasks.WhenEach(), Throws.TypeOf<OverflowException>());
-            Assert.That(() => tasks.AsSpan().WhenEach(), Throws.TypeOf<OverflowException>());
-            Assert.That(() => tasks.ToList().WhenEach(), Throws.TypeOf<OverflowException>());
-            Assert.That(() => tasks.AsEnumerable().WhenEach(), Throws.TypeOf<OverflowException>());
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await foreach (Task<int> task in new Task[] { Task<int>.CompletedTask, Task<float>.CompletedTask }.WhenEach())
+                    {
+                    }
+                }
+                catch (Exception exc)
+                {
+                    if (exc is not InvalidCastException || exc.Message != "Specified cast is not valid.")
+                    {
+                        UnityEngine.Debug.LogException(exc);
+                        throw;
+                    }
+                }
 
 
-            // TEST: done!!
-            UnityEngine.Debug.Log("[TEST] Completed Successfully!!");
+                // TEST: done!!
+                UnityEngine.Debug.Log("[TEST] Completed Successfully!!");
+            });
+        }
+
+
+        [UnityEditor.MenuItem(MENU_ROOT + nameof(Ctor_IEnumerable), priority = 0)]
+        [Test]
+        static void Ctor_IEnumerable()
+        {
+            // TEST: write test code here
+            //       > 'Assert.That(..., Is/Throws)' can be used
+
+            // there was a chance to loop indefinitely when task count is 2^n+1 (n>=4)
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    int testSize = WhenEachEnumerator<Task>.DEFAULT_ENUMERABLE_COUNT;
+                    int count = 0;
+                    await foreach (var x in (Enumerable.Range(0, testSize).Select(_ => Task.CompletedTask)).WhenEach())
+                    {
+                        count++;
+                    }
+                    if (count != testSize)
+                        throw new Exception($"completed task count is not {testSize}: {count}");
+
+                    testSize++;
+                    count = 0;
+                    await foreach (var x in (Enumerable.Range(0, testSize).Select(_ => Task.CompletedTask)).WhenEach())
+                    {
+                        count++;
+                    }
+                    if (count != testSize)
+                        throw new Exception($"completed task count is not {testSize}: {count}");
+                }
+                catch (Exception exc)
+                {
+                    UnityEngine.Debug.LogException(exc);
+                    throw;
+                }
+
+
+                // TEST: done!!
+                UnityEngine.Debug.Log("[TEST] Completed Successfully!!");
+            });
         }
 
 
@@ -449,4 +513,4 @@ namespace SatorImaging.UnityFundamentals.TEST.WhenEach_Enumerator  // must be un
 #endif
 #endregion
 
-#endif
+//#endif
