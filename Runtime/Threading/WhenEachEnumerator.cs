@@ -10,12 +10,6 @@ await foreach (var task in tasks.WhenEach())
     // do something for completed task
 }
 
-// can perform strictly typed enumeration
-await foreach (var task in new WhenEachEnumerator<Task<int>>(tasks))
-{
-    Console.WriteLine(task.Result);
-}
-
 // for efficiency, cancellation token should be passed to WhenEach() directly.
 // note that cancellation affects only on enumeration.
 // jobs may continue running if those are depending on different token.
@@ -63,12 +57,13 @@ namespace SatorImaging.UnityFundamentals
 
 
         /// <inheritdoc cref="WhenEachEnumerator{T}"/>
-        public static WhenEachEnumerator<Task> WhenEach<T>(this ICollection<T> tasks, CancellationToken cancellationToken = default)
+        public static WhenEachEnumerator<T> WhenEach<T>(this ICollection<T> tasks, CancellationToken cancellationToken = default)
             where T : Task => new(tasks, cancellationToken);
 
+
         /// <inheritdoc cref="WhenEachEnumerator{T}"/>
-        public static WhenEachEnumerator<Task> WhenEach<T>(this IEnumerable<T> tasks, CancellationToken cancellationToken = default)
-            where T : Task => new(tasks, cancellationToken);
+        public static WhenEachEnumerator<Task> WhenEach(this IEnumerable<Task> tasks, CancellationToken cancellationToken = default)
+            => new(tasks, cancellationToken);
     }
 
 
