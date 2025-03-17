@@ -774,9 +774,11 @@ namespace SatorImaging.UnityFundamentals
 
                     CopyBufferWithSubstitution(sourceSliced, result, ref currentLength, fromList[i], toList[i]);
 
-                    if (i < (count - 1))  // update source for next iteration
+                    if (i != (count - 1))  // perf: just swap the span refs
                     {
-                        result.Slice(0, currentLength).CopyTo(source);
+                        var temp = source;
+                        source = result;
+                        result = temp;
                     }
                 }
 
@@ -936,6 +938,9 @@ namespace SatorImaging.UnityFundamentals.TEST.Span_List  // must be unique. don'
                 new(null, "XX", "YY", "ZZ", "  763742878&^*&^&*6874    3578++0989807()()()(   "))
                 ,
                 Is.EqualTo("  {{{{XXaslkdfj }}}}}}YYYYYYXXXXZZ }{}{}{   763742878&^*&^&*6874    3578++0989807()()()(    }}}"));
+
+            template = "{0}{1}abc{2}";
+            Assert.That(template.ReplaceNonAlloc((SpanList<char>)new[] { "{0}", "{1}", "{2}" }, (SpanList<char>)new[] { "x", "y", "z" }), Is.EqualTo("xyabcz"));
 
 
             // TEST: done!!
