@@ -87,6 +87,7 @@ if (urlAndOptions.TrySplit('?', out var url, out var allOptions)
 using NUnit.Framework;
 using System;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -311,6 +312,7 @@ namespace SatorImaging.UnityFundamentals
 
 
         /// <exception cref="IndexOutOfRangeException"></exception>
+        [DoesNotReturn]
         static void ThrowHelper(int position)
         {
             // ability to take failed position by splitting messasge with '@'
@@ -345,8 +347,6 @@ namespace SatorImaging.UnityFundamentals
                 return result;
             }
         }
-
-        // don't add `GetEnumerator` here to keep struct simple enough
     }
 
 
@@ -511,6 +511,13 @@ namespace SatorImaging.UnityFundamentals
     /// </summary>
     public static class NonAllocStringSplitterExtensions
     {
+        /// <returns><c>ReadOnlySpan&lt;char&gt;</c> enumerator for use with <c>foreach</c> statement.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static NonAllocStringSplitterEnumerator GetEnumerator(this in NonAllocStringSplitter splitter) => new(splitter);
+
+
+        /*  SplitNonAlloc  ================================================================ */
+
         /// <inheritdoc cref="NonAllocStringSplitter"/>
         /// <returns>use <c>.Count</c> and indexer <c>[int]</c> to enumerate splitted spans.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -518,18 +525,25 @@ namespace SatorImaging.UnityFundamentals
 
         /// <inheritdoc cref="SplitNonAlloc(ReadOnlySpan{char}, char)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static NonAllocStringSplitter SplitNonAlloc(this ReadOnlySpan<char> text, ReadOnlySpan<char> sequence)
-            => new(text, sequence, false);
+        public static NonAllocStringSplitter SplitNonAlloc(this string text, char splitter) => new(text.AsSpan(), splitter);
+
 
         /// <inheritdoc cref="SplitNonAlloc(ReadOnlySpan{char}, char)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static NonAllocStringSplitter SplitAnyNonAlloc(this ReadOnlySpan<char> text, ReadOnlySpan<char> splitAny)
-            => new(text, splitAny, true);
+        public static NonAllocStringSplitter SplitNonAlloc(this ReadOnlySpan<char> text, ReadOnlySpan<char> sequence) => new(text, sequence, false);
 
-
-        /// <returns><c>ReadOnlySpan&lt;char&gt;</c> enumerator for use with <c>foreach</c> statement.</returns>
+        /// <inheritdoc cref="SplitNonAlloc(ReadOnlySpan{char}, ReadOnlySpan{char})"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static NonAllocStringSplitterEnumerator GetEnumerator(this in NonAllocStringSplitter splitter) => new(splitter);
+        public static NonAllocStringSplitter SplitNonAlloc(this string text, ReadOnlySpan<char> sequence) => new(text.AsSpan(), sequence, false);
+
+
+        /// <inheritdoc cref="SplitNonAlloc(ReadOnlySpan{char}, char)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static NonAllocStringSplitter SplitAnyNonAlloc(this ReadOnlySpan<char> text, ReadOnlySpan<char> splitAny) => new(text, splitAny, true);
+
+        /// <inheritdoc cref="SplitAnyNonAlloc(ReadOnlySpan{char}, ReadOnlySpan{char})"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static NonAllocStringSplitter SplitAnyNonAlloc(this string text, ReadOnlySpan<char> splitAny) => new(text.AsSpan(), splitAny, true);
 
 
         /*  incremental splitter  ================================================================ */
@@ -541,8 +555,18 @@ namespace SatorImaging.UnityFundamentals
 
         /// <inheritdoc cref="SplitEnumerator(ReadOnlySpan{char}, char)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static NonAllocIncrementalStringSplitter SplitEnumerator(this string text, char splitter) => new(text.AsSpan(), splitter);
+
+
+        /// <inheritdoc cref="SplitEnumerator(ReadOnlySpan{char}, char)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static NonAllocIncrementalStringSplitter SplitEnumerator(this ReadOnlySpan<char> text, ReadOnlySpan<char> sequence, bool splitByAnyChar)
             => new(text, sequence, splitByAnyChar);
+
+        /// <inheritdoc cref="SplitEnumerator(ReadOnlySpan{char}, ReadOnlySpan{char}, bool)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static NonAllocIncrementalStringSplitter SplitEnumerator(this string text, ReadOnlySpan<char> sequence, bool splitByAnyChar)
+            => new(text.AsSpan(), sequence, splitByAnyChar);
 
 
         /*  simple helpers  ================================================================ */
@@ -576,6 +600,12 @@ namespace SatorImaging.UnityFundamentals
             return true;
         }
 
+        /// <inheritdoc cref="TrySplit(ReadOnlySpan{char}, char, out ReadOnlySpan{char}, out ReadOnlySpan{char})"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool TrySplit(this string text, char splitter, out ReadOnlySpan<char> before, out ReadOnlySpan<char> after)
+            => TrySplit(text.AsSpan(), splitter, out before, out after);
+
+
         /// <summary>
         /// <code>
         /// 1. "  0 1  2" by ' ' --> "  0 1" and "2"  (removes repeating split chars)
@@ -605,6 +635,10 @@ namespace SatorImaging.UnityFundamentals
             return true;
         }
 
+        /// <inheritdoc cref="TrySplitLast(ReadOnlySpan{char}, char, out ReadOnlySpan{char}, out ReadOnlySpan{char})"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool TrySplitLast(this string text, char splitter, out ReadOnlySpan<char> before, out ReadOnlySpan<char> after)
+            => TrySplitLast(text.AsSpan(), splitter, out before, out after);
     }
 
 }
