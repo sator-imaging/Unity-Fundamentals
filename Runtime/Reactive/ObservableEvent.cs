@@ -15,12 +15,13 @@ private ObservableEvent<int> m_myEvent = new();
 public IObservableEvent<int> MyEvent => m_myEvent;
 
 // invoke event
-m_myEvent.Invoke();
+m_myEvent.Invoke(310);
 
 // consumer can only perform subscribe/unsubscribe
-MyEvent.Subscribe(...).BindTo(cancellationToken);
-MyEvent.Subscribe(myAction).AddTo(disposableCollection);
-MyEvent.Unsubscribe(myAction);
+MyEvent.Subscribe(myAction)
+    .BindTo(cancellationToken);  // unsubscribe when token is canceled.
+    .AddTo(disposables);         // or, add to IDisposable collection to unsub later.
+MyEvent.Unsubscribe(myAction);   // ofcourse able to unsubscribe manually.
 
 // clear all event handlers. note that event is still exist and accepts new handler
 m_myEvent.Dispose();
