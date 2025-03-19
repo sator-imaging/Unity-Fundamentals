@@ -30,8 +30,11 @@ ManagedShell.DisposeGameObject(readonlyComponentCollection);
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using UnityEngine;
+
+#nullable enable
 
 namespace SatorImaging.UnityFundamentals
 {
@@ -119,11 +122,11 @@ namespace SatorImaging.UnityFundamentals
 
         /// <summary>NOTE: Do nothing when obj is null or Transform component.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Dispose<T>(ref T obj, float t = 0f)
+        public static void Dispose<T>([MaybeNull] ref T obj, float t = 0f)
             where T : UnityEngine.Object
         {
             Dispose_Internal(obj, t);
-            obj = (((null)!));
+            obj = null;
         }
 
         /// <summary>
@@ -132,11 +135,11 @@ namespace SatorImaging.UnityFundamentals
         /// </summary>
         /// <remarks>Shorthand for `Destroy(component.gameObject); component = null;`</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void DisposeGameObject<T>(ref T component, float t = 0f)
+        public static void DisposeGameObject<T>([MaybeNull] ref T component, float t = 0f)
             where T : Component
         {
             Dispose_Internal(component.gameObject, t);
-            component = (((null)!));
+            component = null;
         }
 
 
@@ -180,11 +183,11 @@ namespace SatorImaging.UnityFundamentals
         /// Dispose objects in collection and collection together.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Dispose<T>(ref T?[] array, float t = 0f)
+        public static void Dispose<T>([MaybeNull] ref T?[] array, float t = 0f)
             where T : UnityEngine.Object
         {
             Dispose(array, t);
-            array = (((null)!));
+            array = null;
         }
 
         /// <summary>
@@ -205,11 +208,11 @@ namespace SatorImaging.UnityFundamentals
 
         /// <inheritdoc cref="Dispose{T}(ref T[], float)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Dispose<T>(ref List<T?> list, float t = 0f)
+        public static void Dispose<T>([MaybeNull] ref List<T?> list, float t = 0f)
             where T : UnityEngine.Object
         {
             Dispose(list, t);
-            list = (((null)!));
+            list = null;
         }
 
         /// <inheritdoc cref="Dispose{T}(T[], float)"/>
@@ -226,11 +229,11 @@ namespace SatorImaging.UnityFundamentals
 
         /// <inheritdoc cref="Dispose{T}(ref T[], float)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Dispose<T>(ref ICollection<T?> collection, float t = 0f)
+        public static void Dispose<T>([MaybeNull] ref ICollection<T?> collection, float t = 0f)
             where T : UnityEngine.Object
         {
             Dispose(collection, t);
-            collection = (((null)!));
+            collection = null;
         }
 
         /// <inheritdoc cref="Dispose{T}(T[], float)"/>
@@ -250,10 +253,10 @@ namespace SatorImaging.UnityFundamentals
         /// <c>Dispose()</c> will be called if <c>TKey</c> and/or <c>TValue</c> implements <see cref="IDisposable"/>.
         /// </remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Dispose<TKey, TValue>(ref IDictionary<TKey, TValue?> dict, float t = 0f)
+        public static void Dispose<TKey, TValue>([MaybeNull] ref IDictionary<TKey, TValue?> dict, float t = 0f)
         {
             Dispose(dict, t);
-            dict = (((null)!));
+            dict = null;
         }
 
         /// <inheritdoc cref="Dispose{T}(T[], float)"/>
@@ -296,11 +299,11 @@ namespace SatorImaging.UnityFundamentals
         /// Dispose objects in collection and collection together.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void DisposeGameObject<T>(ref T?[] array, float t = 0f)
+        public static void DisposeGameObject<T>([MaybeNull] ref T?[] array, float t = 0f)
             where T : Component
         {
             DisposeGameObject(array, t);
-            array = (((null)!));
+            array = null;
         }
 
         /// <summary>
@@ -325,11 +328,11 @@ namespace SatorImaging.UnityFundamentals
 
         /// <inheritdoc cref="DisposeGameObject{T}(ref T[], float)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void DisposeGameObject<T>(ref List<T?> list, float t = 0f)
+        public static void DisposeGameObject<T>([MaybeNull] ref List<T?> list, float t = 0f)
             where T : Component
         {
             DisposeGameObject(list, t);
-            list = (((null)!));
+            list = null;
         }
 
         /// <inheritdoc cref="DisposeGameObject{T}(T[], float)"/>
@@ -349,11 +352,11 @@ namespace SatorImaging.UnityFundamentals
 
         /// <inheritdoc cref="DisposeGameObject{T}(ref T[], float)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void DisposeGameObject<T>(ref ICollection<T?> collection, float t = 0f)
+        public static void DisposeGameObject<T>([MaybeNull] ref ICollection<T?> collection, float t = 0f)
             where T : Component
         {
             DisposeGameObject(collection, t);
-            collection = (((null)!));
+            collection = null;
         }
 
         /// <inheritdoc cref="DisposeGameObject{T}(T[], float)"/>
@@ -375,10 +378,10 @@ namespace SatorImaging.UnityFundamentals
         /// <c>Dispose()</c> will be called if <c>TKey</c> and/or <c>TValue</c> implements <see cref="IDisposable"/>.
         /// </remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void DisposeGameObject<TKey, TValue>(ref IDictionary<TKey, TValue?> dict, float t = 0f)
+        public static void DisposeGameObject<TKey, TValue>([MaybeNull] ref IDictionary<TKey, TValue?> dict, float t = 0f)
         {
             DisposeGameObject(dict, t);
-            dict = (((null)!));
+            dict = null;
         }
 
         /// <inheritdoc cref="DisposeGameObject{T}(T[], float)"/>

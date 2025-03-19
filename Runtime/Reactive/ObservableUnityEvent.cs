@@ -114,12 +114,12 @@ namespace SatorImaging.UnityFundamentals
 
         /*  unsub  ================================================================ */
 
-        public static void AddTo(this in ObservableUnityEvent.Observable self, ICollection<IDisposable> collection) => collection.Add(self);
-        public static void AddTo<T>(this in ObservableUnityEvent.Observable<T> self, ICollection<IDisposable> collection) => collection.Add(self);
+        public static void AddTo(this in Observable self, ICollection<IDisposable> collection) => collection.Add(self);
+        public static void AddTo<T>(this in Observable<T> self, ICollection<IDisposable> collection) => collection.Add(self);
 
-        public static CancellationTokenRegistration BindTo(this in ObservableUnityEvent.Observable self, CancellationToken cancellationToken)
+        public static CancellationTokenRegistration BindTo(this in Observable self, CancellationToken cancellationToken)
             => BindCore(self, cancellationToken);
-        public static CancellationTokenRegistration BindTo<T>(this in ObservableUnityEvent.Observable<T> self, CancellationToken cancellationToken)
+        public static CancellationTokenRegistration BindTo<T>(this in Observable<T> self, CancellationToken cancellationToken)
             => BindCore(self, cancellationToken);
 
         static CancellationTokenRegistration BindCore(IDisposable self, CancellationToken cancellationToken)

@@ -1,4 +1,4 @@
-﻿/** Fast & Non-Alloc String Builder for Unity
+/** Fast & Non-Alloc String Builder for Unity
  ** (c) 2024 Sator Imaging, Licensed under the MIT License
  ** https://github.com/sator-imaging/Unity-Fundamentals
 
@@ -79,17 +79,6 @@ namespace SatorImaging.UnityFundamentals
     /// <inheritdoc cref="UltraFastString"/>
     public static class UString
     {
-        /// <inheritdoc cref="Rent()"/>
-        [Obsolete]
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static UltraFastString Rent(ReadOnlySpan<char> text)
-        {
-            var us = Rent();
-            us.Append(text);
-            return us;
-        }
-
-
         /// <inheritdoc cref="UltraFastString"/>
         /// <remarks>
         /// NOTE: to reuse allocated buffer on next time, use with <see langword="using"/> statement or call <see cref="UltraFastString.ToStringAndDispose"/> explictly.
@@ -297,9 +286,47 @@ namespace SatorImaging.UnityFundamentals
 
 #pragma warning disable CS0809
             const string USAGE_HELP = "\nUse `" + nameof(ToStringAndDispose) + "()` method to get result and reuse internal buffer.";
-            [Obsolete(USAGE_HELP, false)] public override readonly string ToString() => new(AsSpan());
-            [Obsolete(USAGE_HELP, true)] public static implicit operator string(UltraFastString self) => self.ToString();
+            [Obsolete(USAGE_HELP, false)] public override readonly string ToString() => throw new NotSupportedException(USAGE_HELP);
+            [Obsolete(USAGE_HELP, true)] public static implicit operator string(UltraFastString self) => throw new NotSupportedException(USAGE_HELP);
 #pragma warning restore CS0809
+
+
+            /*  cout/endl  ================================================================ */
+
+            // NOTE: these operators will allow C/C++ style string syntax: cout << "Hello, world." << endl;
+            //       --> string foo = @new + "Value: " + 310 + @string;
+            //       ...useless!!
+            /*
+            public readonly struct StringTerminator
+            {
+                const string USAGE = "This struct can only be used with " + nameof(UltraFastString);
+                [Obsolete(USAGE, true)] public static implicit operator string(StringTerminator self) => throw new NotSupportedException(USAGE);
+            }
+            public static string operator +(UltraFastString self, StringTerminator other) => self.ToStringAndDispose();
+
+            public static UltraFastString operator +(UltraFastString self, char other) { self.Append(other); return self; }
+            public static UltraFastString operator +(UltraFastString self, bool other) { self.Append(other); return self; }
+            public static UltraFastString operator +(UltraFastString self, string other) { self.Append(other.AsSpan()); return self; }
+            public static UltraFastString operator +(UltraFastString self, ReadOnlySpan<char> other) { self.Append(other); return self; }
+
+            public static UltraFastString operator +(UltraFastString self, sbyte other) { self.Append(other); return self; }
+            public static UltraFastString operator +(UltraFastString self, byte other) { self.Append(other); return self; }
+            public static UltraFastString operator +(UltraFastString self, short other) { self.Append(other); return self; }
+            public static UltraFastString operator +(UltraFastString self, ushort other) { self.Append(other); return self; }
+            public static UltraFastString operator +(UltraFastString self, int other) { self.Append(other); return self; }
+            public static UltraFastString operator +(UltraFastString self, uint other) { self.Append(other); return self; }
+            public static UltraFastString operator +(UltraFastString self, long other) { self.Append(other); return self; }
+            public static UltraFastString operator +(UltraFastString self, ulong other) { self.Append(other); return self; }
+
+            public static UltraFastString operator +(UltraFastString self, float other) { self.Append(other); return self; }
+            public static UltraFastString operator +(UltraFastString self, double other) { self.Append(other); return self; }
+            public static UltraFastString operator +(UltraFastString self, decimal other) { self.Append(other); return self; }
+
+            public static UltraFastString operator +(UltraFastString self, TimeSpan other) { self.Append(other); return self; }
+            public static UltraFastString operator +(UltraFastString self, DateTime other) { self.Append(other); return self; }
+            public static UltraFastString operator +(UltraFastString self, DateTimeOffset other) { self.Append(other); return self; }
+            public static UltraFastString operator +(UltraFastString self, Guid other) { self.Append(other); return self; }
+            */
 
 
             /*  buffer accessor  ================================================================ */
@@ -1483,12 +1510,10 @@ namespace SatorImaging.UnityFundamentals.TEST.U_String  // must be unique. don't
             us.Append("Value: ");
             us.Append(310);
             Assert.That(us.ToStringAndDispose(), Is.EqualTo("Value: 310"));
-            us = UString.Rent("Value: ");
-            us.Append(310);
-            Assert.That(us.ToStringAndDispose(), Is.EqualTo("Value: 310"));
 
             // return()?
-            us = UString.Rent("Value: ");
+            us = UString.Rent();
+            us.Append("Value: ");
             us.Append(310, "D5");
             Assert.That(us.ToStringAndDispose(), Is.EqualTo("Value: 00310"));
 
@@ -1501,13 +1526,15 @@ namespace SatorImaging.UnityFundamentals.TEST.U_String  // must be unique. don't
             //newLine?
             var restoreNewLine = UString.NewLineChars;
 
-            us = UString.Rent("Value: ");
+            us = UString.Rent();
+            us.Append("Value: ");
             us.Append(310, "D5");
             us.NewLine();
             Assert.That(us.ToStringAndDispose(), Is.EqualTo("Value: 00310\n"));
 
             UString.NewLineChars = "\r\n";
-            us = UString.Rent("Value: ");
+            us = UString.Rent();
+            us.Append("Value: ");
             us.Append(310, "D5");
             us.NewLine();
             Assert.That(us.ToStringAndDispose(), Is.EqualTo("Value: 00310\r\n"));
@@ -1545,9 +1572,9 @@ namespace SatorImaging.UnityFundamentals.TEST.U_String  // must be unique. don't
             using (var sb = UString.Rent())
             {
                 sb.Append("1234567890");
-                _ = sb.ToString() == "not";  // remove .ToString will show error
-                sb.ToString();
-                sb.ToString();
+                //_ = sb.ToString() == "not";  // remove .ToString will show error
+                //sb.ToString();
+                //sb.ToString();
 
                 var (array, consumed) = sb.GetRawBuffer();
                 Assert.That(consumed, Is.EqualTo(10));
@@ -1594,7 +1621,8 @@ namespace SatorImaging.UnityFundamentals.TEST.U_String  // must be unique. don't
             int DUMMY_LENGTH = LOREM.Length + M_KENJI.Length + SURROGATE.Length;
 
             var SystemString = (((LOREM + 310 + M_KENJI + 3.10 + SURROGATE + DateTime.UnixEpoch)));
-            var UStr = UString.Rent(LOREM);
+            var UStr = UString.Rent();
+            UStr.Append(LOREM);
             UStr.Append(310);
             UStr.Append(M_KENJI);
             UStr.Append(3.10);
@@ -1689,7 +1717,7 @@ namespace SatorImaging.UnityFundamentals.TEST.U_String  // must be unique. don't
             sb.NewLine();
             sb.NewLine();
 
-            Assert.That(sb.ToString(),
+            Assert.That(sb.ToStringAndDispose(),
                 Is.EqualTo("-1010-2020-3030-4040-1.1-2.2-3.3 True // 1970/01/01 0:00:00 1970/01/01 0:00:00 +09:00 00:05:10 00000136-001f-0003-0102-030405060708\n\n"));
 
 
@@ -1719,7 +1747,7 @@ namespace SatorImaging.UnityFundamentals.TEST.U_String  // must be unique. don't
             sb.NewLine();
             sb.NewLine();
 
-            Assert.That(sb.ToString(),
+            Assert.That(sb.ToStringAndDispose(),
                 Is.EqualTo("-1010-2020-3030-4040-1.1-2.2-3.3 True // 1970/01/01 0:00:00 1970/01/01 0:00:00 +09:00 00:05:10 00000136-001f-0003-0102-030405060708\n\n"));
 
 
@@ -1749,7 +1777,7 @@ namespace SatorImaging.UnityFundamentals.TEST.U_String  // must be unique. don't
             sb.NewLine();
             sb.NewLine();
 
-            Assert.That(sb.ToString(),
+            Assert.That(sb.ToStringAndDispose(),
                 Is.EqualTo("-1010-2020-3030-4040-1.1-2.2-3.3 True // 1970/01/01 0:00:00 1970/01/01 0:00:00 +09:00 00:05:10 00000136-001f-0003-0102-030405060708\n\n"));
 
 

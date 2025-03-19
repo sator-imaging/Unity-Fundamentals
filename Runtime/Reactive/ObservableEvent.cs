@@ -15,12 +15,13 @@ private ObservableEvent<int> m_myEvent = new();
 public IObservableEvent<int> MyEvent => m_myEvent;
 
 // invoke event
-m_myEvent.Invoke();
+m_myEvent.Invoke(310);
 
 // consumer can only perform subscribe/unsubscribe
-MyEvent.Subscribe(...).BindTo(cancellationToken);
-MyEvent.Subscribe(myAction).AddTo(disposableCollection);
-MyEvent.Unsubscribe(myAction);
+MyEvent.Subscribe(myAction)
+    .BindTo(cancellationToken);  // unsubscribe when token is canceled.
+    .AddTo(disposables);         // or, add to IDisposable collection to unsub later.
+MyEvent.Unsubscribe(myAction);   // ofcourse able to unsubscribe manually.
 
 // clear all event handlers. note that event is still exist and accepts new handler
 m_myEvent.Dispose();
@@ -53,6 +54,28 @@ namespace SatorImaging.UnityFundamentals
     public class ObservableEvent<T> : IObservableEvent<T>, IDisposable
     {
         protected event Action<T>? RawEvent;
+
+        public ObservableEvent(CancellationToken disposeWhenCanceled = default)
+        {
+            if (disposeWhenCanceled.CanBeCanceled)
+            {
+                // not good to depending on other class field but declaring static field instead in
+                // this generic type will bloat code size. no choice.
+
+                if (ExecutionContext.IsFlowSuppressed())
+                {
+                    _ = disposeWhenCanceled.Register(ObservableEventExtensions.InvokeDisposableDispose, this, false);
+                }
+                else
+                {
+                    using (ExecutionContext.SuppressFlow())
+                    {
+                        _ = disposeWhenCanceled.Register(ObservableEventExtensions.InvokeDisposableDispose, this, false);
+                    }
+                }
+            }
+        }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Invoke(T value) => RawEvent?.Invoke(value);
@@ -159,7 +182,7 @@ namespace SatorImaging.UnityFundamentals
             }
         }
 
-        readonly static Action<object> InvokeDisposableDispose = static (obj) =>
+        internal readonly static Action<object> InvokeDisposableDispose = static (obj) =>
         {
 #if UNITY_EDITOR
             try

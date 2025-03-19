@@ -16,9 +16,9 @@ using var rental = ArrayPool<byte>.Shared.Rent(256)
 // 'Value' to access extension method receiver
 var span = rental.Value.AsSpan();
 
-// create Defer action from scratch
-using var _ = Defer.New(something.Value, (restore) => something.Value = restore);
-something.Value = tempValue;
+// ex) restore temporary value to original
+using var _ = foo.Defer(foo.Value, (x, restore) => x.Value = restore);
+foo.Value = tempValue;
 
 // ex) always rewind stream on exit
 using var _ = stream.Defer(stream => stream.Position = 0);
@@ -105,7 +105,7 @@ namespace SatorImaging.UnityFundamentals
     }
 
 
-    public static class DeferExtensions
+    public static class DeferExtensions  // type separation is required to allow declaring both 'Defer' --> `Defer.New()` and `foo.Defer()`
     {
         /// <summary>
         /// Always execute action when exiting method or block scope even if fault by exception.
@@ -179,13 +179,21 @@ namespace SatorImaging.UnityFundamentals.TEST.Defer_Tests  // must be unique. do
             // TEST: write test code here
             //       > 'Assert.That(..., Is/Throws)' can be used
 
-            using var secret = ArrayPool<byte>.Shared.Rent(77).Defer(static x =>
+            var foo = new MyRecord("Restore", 310);
+            using (var restore = foo.Defer(foo.Value, (x, restore) => x.Value = restore))
+            {
+                foo.Value = -1;
+                Assert.That(foo.Value, Is.EqualTo(-1));
+            }
+            Assert.That(foo.Value, Is.EqualTo(310));
+
+
+            using var secretByteArray = ArrayPool<byte>.Shared.Rent(77).Defer(static x =>
             {
                 ArrayPool<byte>.Shared.Return(x, clearArray: true);
                 UnityEngine.Debug.Log($"Disposed: rental array (length:{x.Length})");
             });
-
-            UnityEngine.Debug.Log("Rental array length: " + secret.Value.Length);
+            UnityEngine.Debug.Log("Rental array length: " + secretByteArray.Value.Length);
 
 
             using (var anony = new { name = "anonymous", value = 3.10f }.Defer(static x => UnityEngine.Debug.Log($"Disposed: {x.name} ({x.value})")))
@@ -217,8 +225,8 @@ namespace SatorImaging.UnityFundamentals.TEST.Defer_Tests  // must be unique. do
 
         public record MyRecord(string Name, int Value)
         {
-            internal string Name { get; } = Name;
-            public int Value { get; private set; } = Value;
+            internal string Name { get; private set; } = Name;
+            public int Value { get; set; } = Value;
 
             public void PrintValue() => UnityEngine.Debug.Log(nameof(MyRecord) + $" method: {Name} ({Value:#,0})");
 
