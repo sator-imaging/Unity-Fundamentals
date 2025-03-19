@@ -105,7 +105,7 @@ namespace SatorImaging.UnityFundamentals
     }
 
 
-    public static class DeferExtensions
+    public static class DeferExtensions  // type separation is required to allow declaring both 'Defer' --> `Defer.New()` and `foo.Defer()`
     {
         /// <summary>
         /// Always execute action when exiting method or block scope even if fault by exception.
