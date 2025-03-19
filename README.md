@@ -19,7 +19,7 @@ https://github.com/sator-imaging/Unity-Fundamentals.git
 
 Specific version (append `#vX.Y.Z` at the end)
 ```
-https://github.com/sator-imaging/Unity-Fundamentals.git#v1.1.1
+https://github.com/sator-imaging/Unity-Fundamentals.git#v1.2.0
 ```
 
 > Supported Unity version: Unity 2021.3+
