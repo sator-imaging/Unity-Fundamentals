@@ -60,7 +60,9 @@ namespace NUnit.Framework
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void Success(string msg, string? testExpression, string? memberName, string? filePath, int lineNumber)
         {
+#if UNITY_EDITOR
             if (UNITY_EDITOR.Get_VerboseLogging())
+#endif
             {
                 if (testExpression != null)
                     msg += $" \t code: `{testExpression}`";
