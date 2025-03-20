@@ -84,9 +84,6 @@ namespace SatorImaging.UnityFundamentals
     [StructLayout(LayoutKind.Auto)]
     public readonly struct SpanList<T> : IEquatable<SpanList<T>>  // cannot -> IEnumerable<ReadOnlySpan<T>>, IReadOnlyCollection<ReadOnlySpan<T>>
     {
-        [DoesNotReturn] static void ThrowArgumentOutOfRange(string paramName) => throw new ArgumentOutOfRangeException(paramName);
-        [DoesNotReturn] static void ThrowArgumentException(string message) => throw new ArgumentException(message);
-
         // this struct seems enough small. should use `in` modifier?
         public static bool operator ==(SpanList<T> left, SpanList<T> right) => left.Equals(right);
         public static bool operator !=(SpanList<T> left, SpanList<T> right) => !(left == right);
@@ -131,7 +128,7 @@ namespace SatorImaging.UnityFundamentals
                         ReadOnlySpan<T> ros9 = default)
         {
             if (checked(((uint)count) > 10))
-                ThrowArgumentOutOfRange(nameof(count));
+                SpanList.ThrowArgumentOutOfRange(nameof(count));
 
             int requiredBufferSize = 0;
 
@@ -153,7 +150,7 @@ namespace SatorImaging.UnityFundamentals
             if (buffer != null)
             {
                 if (buffer.Length < requiredBufferSize)
-                    ThrowArgumentException("input sources require buffer size greater than " + requiredBufferSize);
+                    SpanList.ThrowArgumentException("input sources require buffer size greater than " + requiredBufferSize);
             }
             else
             {
@@ -231,7 +228,7 @@ namespace SatorImaging.UnityFundamentals
 
                 if (existingBufferLength < requiredBufferSize)
                 {
-                    ThrowArgumentException("input sources require buffer size greater than " + requiredBufferSize);
+                    SpanList.ThrowArgumentException("input sources require buffer size greater than " + requiredBufferSize);
                 }
             }
 
@@ -305,7 +302,7 @@ namespace SatorImaging.UnityFundamentals
             {
                 var cap = capacities[i];
                 if (cap < 0)
-                    ThrowArgumentOutOfRange("capacity must be greater than or equal to 0: " + cap);
+                    SpanList.ThrowArgumentOutOfRange("capacity must be greater than or equal to 0: " + cap);
 
                 requiredBufferSize += cap;
             }
@@ -313,7 +310,7 @@ namespace SatorImaging.UnityFundamentals
             if (buffer != null)
             {
                 if (buffer.Length < requiredBufferSize)
-                    ThrowArgumentException("buffer size must be greater than " + requiredBufferSize);
+                    SpanList.ThrowArgumentException("buffer size must be greater than " + requiredBufferSize);
             }
             else
             {
@@ -418,7 +415,7 @@ namespace SatorImaging.UnityFundamentals
             var end = start + written;
             if (end > fullRange.End.Value)
             {
-                throw new IndexOutOfRangeException("returned length exceeds capacity: " + written);
+                SpanList.ThrowIndexOutOfRange("returned length exceeds capacity: " + written);
             }
 
             activeRanges[index] = new(start, end);
@@ -433,8 +430,9 @@ namespace SatorImaging.UnityFundamentals
     /// </summary>
     public static class SpanList
     {
-        [DoesNotReturn] static void ThrowArgumentException(string message) => throw new ArgumentException(message);
-        [DoesNotReturn] static void ThrowArgumentOutOfRange(string paramName) => throw new ArgumentOutOfRangeException(paramName);
+        [DoesNotReturn] internal static void ThrowArgumentException(string message) => throw new ArgumentException(message);
+        [DoesNotReturn] internal static void ThrowArgumentOutOfRange(string paramName) => throw new ArgumentOutOfRangeException(paramName);
+        [DoesNotReturn] internal static void ThrowIndexOutOfRange(string message) => throw new IndexOutOfRangeException(message);
 
 
         /*  Range helpers  ================================================================ */
