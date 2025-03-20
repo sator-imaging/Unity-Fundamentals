@@ -54,8 +54,8 @@ Transform `event Action<T>` to `IObservable<T>`.
 Providing function for `early-finally` pattern.
 [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/System/Defer.cs.html)
 
-TODO: implement `IAsyncDisposable` overloads.
-ex) `await using var _ = Defer.New(async () => await ...);`
+*TODO*: implement `IAsyncDisposable` overloads.
+- ex) `await using var _ = Defer.New(async () => await ...);`
 
 
 ### `StrictEnum`
@@ -66,6 +66,10 @@ Unlike other enum utility, this class re-use system cache and also support parsi
 ### `SpanList<T>`
 List implementation of `Span<T>` especially designed to work with `Span<char>`.
 [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/System/SpanList.cs.html)
+
+*TODO*: add `(int, int) GetMinMaxLength()`
+- to prevent enumerating repeatedly to get same result.
+- add `bool _isFrozen` to determine recalculate is required. `Write` turns it off when changed.
 
 
 ### `MiniXXHash`
