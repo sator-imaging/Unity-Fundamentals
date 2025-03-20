@@ -43,6 +43,9 @@ namespace SatorImaging.UnityFundamentals
     /// </summary>
     public static class WhenEachEnumeratorExtensions
     {
+        // NOTE: assume that tasks list is always small sized so no difference between these overloads on performance.
+        //       performance lovers can use `new WhenEachEnumerator(ReadOnlySpan<T>)` explicitly.
+
         ///// <inheritdoc cref="WhenEachEnumerator{T}"/>
         //public static WhenEachEnumerator<T> WhenEach<T>(this T[] tasks, CancellationToken cancellationToken = default)
         //    where T : Task => new(tasks.AsSpan(), cancellationToken);
