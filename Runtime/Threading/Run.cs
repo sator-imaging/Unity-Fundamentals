@@ -486,11 +486,9 @@ namespace SatorImaging.UnityFundamentals
         }
 
 
-        [Obsolete("Did you forget to use async overload?")]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void InThreadPool(Action act) => InThreadPool(SyncJob.GetInstance(act), _scheduler.ConcurrentScheduler);
 
-        [Obsolete("Did you forget to use async overload?")]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void InThreadPool<T>(T state, Action<T> act) => InThreadPool(SyncJob<T>.GetInstance(state, act), _scheduler.ConcurrentScheduler);
 
