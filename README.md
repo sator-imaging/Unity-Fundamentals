@@ -54,6 +54,9 @@ Transform `event Action<T>` to `IObservable<T>`.
 Providing function for `early-finally` pattern.
 [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/System/Defer.cs.html)
 
+TODO: implement `IAsyncDisposable` overloads.
+ex) `await using var _ = Defer.New(async () => await ...);`
+
 
 ### `StrictEnum`
 Unlike other enum utility, this class re-use system cache and also support parsing `Flags` value.
