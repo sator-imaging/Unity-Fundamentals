@@ -12,7 +12,7 @@ Most of scripts are C# / .NET compliant. See `using` statements in `.cs` files f
 
 Add the following `git URL` in Unity Package Manager (UPM)
 
-Latest version
+Latest version (very experimental, may have breaking changes without notice)
 ```
 https://github.com/sator-imaging/Unity-Fundamentals.git
 ```
