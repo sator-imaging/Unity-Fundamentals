@@ -4,15 +4,14 @@ Fundamental scripting library for Unity designed to be minimal, efficient & depe
 Most of scripts are C# / .NET compliant. See `using` statements in `.cs` files for details.
 
 > [!TIP]
-> Licensed under the MIT License unless otherwise described.
+> Licensed under the MIT License unless otherwise described.  
+> Supported Unity version: Unity 2021.3+  
 
 
 
 # Installation
 
 Add the following `git URL` in Unity Package Manager (UPM)
-
-> Supported Unity version: Unity 2021.3+
 
 Release version (append `#vX.Y.Z` at the end)
 ```
@@ -76,7 +75,39 @@ List implementation of `Span<T>` especially designed to work with `Span<char>`.
 Minimal xxHash32 / xxHash64 implementation.
 [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/Hashing/MiniXXHash.cs.html)
 
-License: **BSD 2-Clause**
+<details><summary>License: <strong>BSD 2-Clause</strong></summary>
+
+xxHash Clean C Reference Implementation
+```
+xxHash Library
+Copyright (c) 2012-2020 Yann Collet
+Copyright (c) 2019-2020 Devin Hussey (easyaspi314)
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice, this
+  list of conditions and the following disclaimer in the documentation and/or
+  other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+```
+
+</details>
+
 
 
 ### `UString`
