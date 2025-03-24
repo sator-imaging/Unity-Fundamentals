@@ -12,17 +12,17 @@ Most of scripts are C# / .NET compliant. See `using` statements in `.cs` files f
 
 Add the following `git URL` in Unity Package Manager (UPM)
 
-Latest version (very experimental, may have breaking changes without notice)
-```
-https://github.com/sator-imaging/Unity-Fundamentals.git
-```
+> Supported Unity version: Unity 2021.3+
 
-Specific version (append `#vX.Y.Z` at the end)
+Release version (append `#vX.Y.Z` at the end)
 ```
 https://github.com/sator-imaging/Unity-Fundamentals.git#v1.2.0
 ```
 
-> Supported Unity version: Unity 2021.3+
+Latest version (very experimental, may have breaking changes without notice)
+```
+https://github.com/sator-imaging/Unity-Fundamentals.git
+```
 
 
 
