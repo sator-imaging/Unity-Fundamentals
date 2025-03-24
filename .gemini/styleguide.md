@@ -1,3 +1,3 @@
-Posts a code review in english, followed by japanese translation.
+Your message must be written in English, followed by a Japanese translation section.
 
-Japanese translation must be enclosed with `<details>` tag, with `<summary>` tag containing "Japanese translation" label as is.
+The Japanese translation section must be enclosed by the `<details>` tag, with the `<summary>` tag containing "Japanese translation" label as is.
