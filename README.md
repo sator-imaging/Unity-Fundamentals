@@ -218,3 +218,16 @@ and
 for details.
 
 Source: https://github.com/dotnet/sdk/issues/9562#issuecomment-1386955134
+
+
+## Gemini Code Assist for GitHub
+
+### Commands
+Post as a comment for pull request.
+- `/gemini summary`
+- `/gemini review`
+- `/gemini`
+- `/gemini help`
+
+### How to Customize
+https://developers.google.com/gemini-code-assist/docs/customize-gemini-behavior-github#style-guide
