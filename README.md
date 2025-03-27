@@ -69,6 +69,8 @@ List implementation of `Span<T>` especially designed to work with `Span<char>`.
 *TODO*: add `(int, int) GetMinMaxLength()`
 - to prevent enumerating repeatedly to get same result.
 - add `bool _isFrozen` to determine recalculate is required. `Write` turns it off when changed.
+- add `bool IsFormattable` with more strict token check: `{one}{two}` (currently accepted but must be rejected)
+- one pass replacement for `FormatNonAlloc`: search for `{` then perform `.Slice(foundIndex, fromTokenMaxLength)`, check which one is match.
 
 
 ### `MiniXXHash`
