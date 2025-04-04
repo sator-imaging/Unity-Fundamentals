@@ -1,12 +1,13 @@
 # Unity Scripting Fundamentals
 
+🇯🇵 [日本語版](https://qiita.com/sator_imaging/items/235c8447f4171ba5a522)
+
 Fundamental scripting library for Unity designed to be minimal, efficient & dependency-free as possible.
 Most of scripts are C# / .NET compliant. See `using` statements in `.cs` files for details.
 
 > [!TIP]
 > Licensed under the MIT License unless otherwise described.  
 > Supported Unity version: Unity 2021.3+  
-
 
 
 # Installation
@@ -32,6 +33,7 @@ https://github.com/sator-imaging/Unity-Fundamentals.git
 ### Non-Alloc String Splitter
 Split string without allocation.
 [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/Text/NonAllocStringSplitter.cs.html)
+or [日本語版](https://qiita.com/sator_imaging/items/1393aa0efa3b064d77ec)
 
 
 ### Observable Action
@@ -47,6 +49,7 @@ Transform `event Action<T>` to `IObservable<T>`.
 ### `WhenEachEnumerator`
 `Task.WhenEach` for Unity / .NET Standard 2.1
 [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/Threading/WhenEachEnumerator.cs.html)
+or [日本語版](https://qiita.com/sator_imaging/items/0facece38f6e1c03bd19)
 
 
 ### `Defer`
@@ -76,6 +79,7 @@ List implementation of `Span<T>` especially designed to work with `Span<char>`.
 ### `MiniXXHash`
 Minimal xxHash32 / xxHash64 implementation.
 [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/Hashing/MiniXXHash.cs.html)
+or [日本語版](https://qiita.com/sator_imaging/items/36c390c0536a6750b788)
 
 <details><summary>License: <strong>BSD 2-Clause</strong></summary>
 
@@ -115,6 +119,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ### `UString`
 Lightning-fast non-alloc string builder faster than `DefaultInterpolatedStringHandler`
 [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/Text/UString.cs.html)
+or [技術的な解説](https://qiita.com/sator_imaging/items/edc5be1a55dd867e1c73)
 
 *NOTE*: depending on `StrictEnum`
 **TODO**: benchmark
@@ -123,6 +128,7 @@ Lightning-fast non-alloc string builder faster than `DefaultInterpolatedStringHa
 ### `Poolable<T>`
 Self-contained singly linked list based object pool.
 [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/System/Poolable.cs.html)
+or [日本語版](https://qiita.com/sator_imaging/items/2a387a54a01e91e5d71d)
 
 **TODO**: write tests
 
@@ -143,9 +149,12 @@ Job runner for Unity providing reliable un-async-ing functions and more.
 
 ### `ThreadSafeSingleton`
 Thread! safe!! singleton!!!
+[日本語版](https://qiita.com/sator_imaging/items/6c60e462417a5235778a)
 
 
 ### `HalfUlid`
+[実装の詳細](https://qiita.com/sator_imaging/items/576781d95367d5856624)
+
 https://github.com/sator-imaging/Half-Ulid
 
 
@@ -171,11 +180,14 @@ Reliable nullable (`??` `?.` ~~`??=`~~) support for `UnityEngine.Object`.
 ### `ManagedShell`
 Provides functions that avoid creating leaked managed shell.
 [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/UnityObject/ManagedShell.cs.html)
+or [解説その１](https://qiita.com/sator_imaging/items/6bca6c642b6347bd68d8)
+[その２](https://qiita.com/sator_imaging/items/1251fa3a0b51db87a82f)
 
 
 ### `PoolableBehaviour<T>`
 Self-contained singly linked list based `MonoBehaviour` pool.
 [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/UnityObject/PoolableBehaviour.cs.html)
+or [日本語版](https://qiita.com/sator_imaging/items/80c712ee4fcabfce9163)
 
 
 ### UI Toolkit Core Extensions
@@ -203,6 +215,7 @@ And also there is option to delay event to correctly handle dropdown event.
 ### `UnityEditorMainToolbar`
 Provide access to `VisualElement` in Unity main toolbar.
 [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Editor/Uncategorized/UnityEditorMainToolbar.cs.html)
+or [日本語版](https://qiita.com/sator_imaging/items/f1bdf82016117cd6c7bd)
 
 
 ### Leaked Managed Shell Detector
@@ -225,6 +238,7 @@ As IL2CPP bloats resulting C++ code if C# class is not marked with `sealed` modi
 ### CancellationToken based Lifecycle Manager for Unity Editor
 Obsolete features still exist as `.txt` files.
 [📘](https://sator-imaging.github.io/Unity-Fundamentals/Obsolete/LifecycleBehaviour/README.html)
+or [日本語版](https://qiita.com/sator_imaging/items/48296a686e4bbff8676c)
 
 
 
