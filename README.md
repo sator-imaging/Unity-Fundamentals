@@ -21,13 +21,13 @@ Add the following `git URL` in Unity Package Manager (UPM)
 ```
 https://github.com/sator-imaging/Unity-Fundamentals.git#v1.2.0
 ```
-<sup>&ast; Append desired version at the end. (`#vX.Y.Z`)</sup>
+<sup>&nbsp; Append desired version at the end. (`#vX.Y.Z`)</sup>
 
 ### Latest version
 ```
 https://github.com/sator-imaging/Unity-Fundamentals.git
 ```
-<sup>&ast; very experimental, may have breaking changes without notice.</sup>
+<sup>&nbsp; very experimental, may have breaking changes without notice.</sup>
 
 
 
