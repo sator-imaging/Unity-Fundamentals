@@ -14,15 +14,20 @@ Most of scripts are C# / .NET compliant. See `using` statements in `.cs` files f
 
 Add the following `git URL` in Unity Package Manager (UPM)
 
-Release version (append `#vX.Y.Z` at the end)
+![](https://docs.unity3d.com/2020.3/Documentation/uploads/Main/PackageManagerUI-GitURLPackageButton.png)
+
+
+## Release version
 ```
 https://github.com/sator-imaging/Unity-Fundamentals.git#v1.2.0
 ```
+<sup>&ast; Append desired version at the end. (`#vX.Y.Z`)</sup>
 
-Latest version (very experimental, may have breaking changes without notice)
+### Latest version
 ```
 https://github.com/sator-imaging/Unity-Fundamentals.git
 ```
+<sup>&ast; very experimental, may have breaking changes without notice.</sup>
 
 
 
