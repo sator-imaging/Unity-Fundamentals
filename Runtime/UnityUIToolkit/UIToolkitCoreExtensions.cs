@@ -1,6 +1,8 @@
 // (c) 2024-2025 Sator Imaging, Licensed under the MIT License
 // https://github.com/sator-imaging/Unity-Fundamentals
 
+#if STMG_UITOOLKIT_EXISTS
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -242,3 +244,5 @@ namespace SatorImaging.UnityFundamentals
 
     }
 }
+
+#endif
