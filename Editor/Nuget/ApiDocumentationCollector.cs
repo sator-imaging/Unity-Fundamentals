@@ -42,7 +42,7 @@ namespace SatorImaging.UnityFundamentals.Editor
             "/netstandard2.0",
             "/netstandard",
             "/netcore",
-            "/net10.0",  // TODO: number aware sort
+            "/net10.0",  // TODO: number aware sort cannot be done in .NET standard 2.1
             "/net9.0",
             "/net8.0",
             "/net7.0",
@@ -68,6 +68,8 @@ namespace SatorImaging.UnityFundamentals.Editor
 #endif
 
             ;
+
+        readonly static string EXCLUDED_SUB_DIR = "/unity-engine-api/";
 
         const string X_DECLARATION = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
         const string X_DOC = "doc";
@@ -263,7 +265,7 @@ namespace SatorImaging.UnityFundamentals.Editor
             {
                 var dllFilePaths = Directory.EnumerateFiles(targetDirPath, '*' + EXT_DLL, ENUM_FILES_OPTIONS)
                                             .Select(x => x.Replace('\\', '/'))  // normalize!!
-                                            .Where(x => !x.Contains("/unity-engine-api/", StringComparison.OrdinalIgnoreCase))  //TODO
+                                            .Where(x => !x.Contains(EXCLUDED_SUB_DIR, StringComparison.OrdinalIgnoreCase))  //TODO
                                             ;
 
                 int totalCount = dllFilePaths.Count();
@@ -605,6 +607,10 @@ namespace SatorImaging.UnityFundamentals.Editor
 
 #if UNITY_EDITOR_WIN == false
             using var CHMOD = Process.Start("/bin/sh", $"-c \"chmod +x \\\"{batchFilePath}\\\"\"");
+            if (!CHMOD.HasExited || CHMOD.ExitCode != 0)
+            {
+                throw new Exception("Failed: /bin/sh chmod +x");
+            }
 #endif
 
             // always reveal batch command
