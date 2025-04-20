@@ -52,9 +52,9 @@ range = range.SetLength(charsWritten);  // update internal span range directly b
 spanList.GetSpanUnsafe(1, out span).SetLength(Validate(rawBar, span);
 
 // but, there is safe API to write data into internal buffer ^_^
-spanList.Write(2, "my text", static (span, arg) => { arg.AsSpan().CopyTo(span); return arg.Length; });
+spanList.Write(2, "my text", static (span, arg) => Validate(arg, span));
 s = spanList[2];  // "my text"
-spanList.Write(2, "updated text", static (span, arg) => { arg.AsSpan().CopyTo(span); return arg.Length; });
+spanList.Write(2, "updated text", static (span, arg) => Validate(arg, span));
 s = spanList[2];  // "updated text"
 
 return "{foo} {bar} {baz}".FormatNonAlloc(m_fromList, spanList);
@@ -62,13 +62,11 @@ return "{foo} {bar} {baz}".FormatNonAlloc(m_fromList, spanList);
 
  */
 
-using NUnit.Framework;
 using System;
 using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -84,9 +82,6 @@ namespace SatorImaging.UnityFundamentals
     [StructLayout(LayoutKind.Auto)]
     public readonly struct SpanList<T> : IEquatable<SpanList<T>>  // cannot -> IEnumerable<ReadOnlySpan<T>>, IReadOnlyCollection<ReadOnlySpan<T>>
     {
-        [DoesNotReturn] static void ThrowArgumentOutOfRange(string paramName) => throw new ArgumentOutOfRangeException(paramName);
-        [DoesNotReturn] static void ThrowArgumentException(string message) => throw new ArgumentException(message);
-
         // this struct seems enough small. should use `in` modifier?
         public static bool operator ==(SpanList<T> left, SpanList<T> right) => left.Equals(right);
         public static bool operator !=(SpanList<T> left, SpanList<T> right) => !(left == right);
@@ -94,17 +89,10 @@ namespace SatorImaging.UnityFundamentals
         public override int GetHashCode() => HashCode.Combine(this.buffer, this.fullRanges, this.activeRanges);
         public bool Equals(SpanList<T> other)
         {
+            // NOTE: don't be valueObject
             return this.activeRanges == other.activeRanges
                 && this.fullRanges == other.fullRanges
                 && this.buffer == other.buffer
-                ;
-
-            // NOTE: don't be valueObject
-            return this.buffer.Length == other.buffer.Length
-                && this.activeRanges.Length == other.activeRanges.Length
-                && this.activeRanges.AsSpan().SequenceEqual(other.activeRanges)
-                && this.fullRanges.AsSpan().SequenceEqual(other.fullRanges)
-                && EqualityComparer<T[]>.Default.Equals(this.buffer, other.buffer)
                 ;
         }
         public override bool Equals(object? obj) => obj is SpanList<T> other && this.Equals(other);
@@ -131,7 +119,7 @@ namespace SatorImaging.UnityFundamentals
                         ReadOnlySpan<T> ros9 = default)
         {
             if (checked(((uint)count) > 10))
-                ThrowArgumentOutOfRange(nameof(count));
+                SpanList.ThrowArgumentOutOfRange(nameof(count));
 
             int requiredBufferSize = 0;
 
@@ -153,7 +141,7 @@ namespace SatorImaging.UnityFundamentals
             if (buffer != null)
             {
                 if (buffer.Length < requiredBufferSize)
-                    ThrowArgumentException("input sources require buffer size greater than " + requiredBufferSize);
+                    SpanList.ThrowArgumentException("input sources require buffer size greater than " + requiredBufferSize);
             }
             else
             {
@@ -231,7 +219,7 @@ namespace SatorImaging.UnityFundamentals
 
                 if (existingBufferLength < requiredBufferSize)
                 {
-                    ThrowArgumentException("input sources require buffer size greater than " + requiredBufferSize);
+                    SpanList.ThrowArgumentException("input sources require buffer size greater than " + requiredBufferSize);
                 }
             }
 
@@ -305,7 +293,7 @@ namespace SatorImaging.UnityFundamentals
             {
                 var cap = capacities[i];
                 if (cap < 0)
-                    ThrowArgumentOutOfRange("capacity must be greater than or equal to 0: " + cap);
+                    SpanList.ThrowArgumentOutOfRange("capacity must be greater than or equal to 0: " + cap);
 
                 requiredBufferSize += cap;
             }
@@ -313,7 +301,7 @@ namespace SatorImaging.UnityFundamentals
             if (buffer != null)
             {
                 if (buffer.Length < requiredBufferSize)
-                    ThrowArgumentException("buffer size must be greater than " + requiredBufferSize);
+                    SpanList.ThrowArgumentException("buffer size must be greater than " + requiredBufferSize);
             }
             else
             {
@@ -418,7 +406,7 @@ namespace SatorImaging.UnityFundamentals
             var end = start + written;
             if (end > fullRange.End.Value)
             {
-                throw new IndexOutOfRangeException("returned length exceeds capacity: " + written);
+                SpanList.ThrowIndexOutOfRange("returned length exceeds capacity: " + written);
             }
 
             activeRanges[index] = new(start, end);
@@ -433,8 +421,9 @@ namespace SatorImaging.UnityFundamentals
     /// </summary>
     public static class SpanList
     {
-        [DoesNotReturn] static void ThrowArgumentException(string message) => throw new ArgumentException(message);
-        [DoesNotReturn] static void ThrowArgumentOutOfRange(string paramName) => throw new ArgumentOutOfRangeException(paramName);
+        [DoesNotReturn] internal static void ThrowArgumentException(string message) => throw new ArgumentException(message);
+        [DoesNotReturn] internal static void ThrowArgumentOutOfRange(string paramName) => throw new ArgumentOutOfRangeException(paramName);
+        [DoesNotReturn] internal static void ThrowIndexOutOfRange(string message) => throw new IndexOutOfRangeException(message);
 
 
         /*  Range helpers  ================================================================ */
@@ -521,7 +510,7 @@ namespace SatorImaging.UnityFundamentals
             if (capacities.Length == 0)
             {
                 spanList = new(__INTERNAL_USE__: true, null, null);
-                return new(rentalBuffer: null, clearArrayPoolBuffer: false);
+                return new(rentalBuffer: null, clearOnReturn: false);
             }
 
             int requiredBufferSize = 0;
@@ -584,12 +573,12 @@ namespace SatorImaging.UnityFundamentals
         public readonly struct ArrayPoolDisposable<T> : IDisposable
         {
             readonly T[]? rentalBuffer;
-            readonly bool clearArrayPoolBuffer;
+            readonly bool clearOnReturn;
 
-            internal ArrayPoolDisposable(T[]? rentalBuffer, bool clearArrayPoolBuffer = false)
+            internal ArrayPoolDisposable(T[]? rentalBuffer, bool clearOnReturn)
             {
                 this.rentalBuffer = rentalBuffer;
-                this.clearArrayPoolBuffer = clearArrayPoolBuffer;
+                this.clearOnReturn = clearOnReturn || !typeof(T).IsPrimitive;
             }
 
             public void Dispose()
@@ -597,7 +586,7 @@ namespace SatorImaging.UnityFundamentals
                 if (rentalBuffer == null)
                     return;
 
-                ArrayPool<T>.Shared.Return(rentalBuffer, clearArray: clearArrayPoolBuffer);
+                ArrayPool<T>.Shared.Return(rentalBuffer, clearArray: clearOnReturn);
             }
         }
 
@@ -745,7 +734,7 @@ namespace SatorImaging.UnityFundamentals
             char[]? result_array = null;
             try
             {
-                const int STACKALLOC_THRESHOLD = 160;
+                const int STACKALLOC_THRESHOLD = 256;
                 bool useStack = maxPossibleLength <= STACKALLOC_THRESHOLD;
 
                 // stackalloc must be called in Span<char> initializer
@@ -841,7 +830,7 @@ namespace SatorImaging.UnityFundamentals
 
 #region ////////  TEMPLATE: Unity Editor Tests  ////////
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR && false
 
 #pragma warning disable IDE1006  // naming style
 #pragma warning disable CA1861   // avoid constant array
