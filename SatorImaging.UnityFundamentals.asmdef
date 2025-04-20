@@ -5,19 +5,23 @@
         "UnityEngine.UI",
         "UnityEditor.UI",
         "Unity.TextMeshPro",
-        "Unity.TextMeshPro.Editor"
+        "Unity.TextMeshPro.Editor",
+        "SatorImaging.LambdaAssertions.Unity"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
-    "overrideReferences": false,
-    "precompiledReferences": [],
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll",
+        "SatorImaging.LambdaAssertions.dll"
+    ],
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [
         {
             "name": "com.unity.textmeshpro",
-            "expression": "",
+            "expression": "0",
             "define": "STMG_TEXTMESHPRO_EXISTS"
         },
         {
@@ -27,13 +31,23 @@
         },
         {
             "name": "com.unity.ugui",
-            "expression": "",
+            "expression": "0",
             "define": "STMG_UGUI_EXISTS"
         },
         {
             "name": "com.unity.modules.uielements",
-            "expression": "",
+            "expression": "0",
             "define": "STMG_UITOOLKIT_EXISTS"
+        },
+        {
+            "name": "com.unity.ext.nunit",
+            "expression": "0",
+            "define": "STMG_NUNIT_EXISTS"
+        },
+        {
+            "name": "com.sator-imaging.lambda-assertions.unity",
+            "expression": "0",
+            "define": "STMG_LAMBDAASSERTIONS_EXISTS"
         }
     ],
     "noEngineReferences": false

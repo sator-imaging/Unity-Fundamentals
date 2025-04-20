@@ -1,5 +1,12 @@
-﻿// (c) 2024-2025 Sator Imaging, Licensed under the MIT License
+// (c) 2024-2025 Sator Imaging, Licensed under the MIT License
 // https://github.com/sator-imaging/Unity-Fundamentals
+
+/**
+ * > [!NOTE]
+ * > Depending on `StrictEnum`
+ */
+
+#if STMG_UITOOLKIT_EXISTS
 
 using System;
 using System.Collections.Generic;
@@ -13,7 +20,6 @@ using UnityEngine.UIElements;
 
 namespace SatorImaging.UnityFundamentals
 {
-    // NOTE: depending on 'StrictEnum'
     /// <remarks>
     /// NOTE: Enum value MUST start from 0 and increment by 1.
     /// </remarks>
@@ -186,3 +192,5 @@ namespace SatorImaging.UnityFundamentals
 
     }
 }
+
+#endif
