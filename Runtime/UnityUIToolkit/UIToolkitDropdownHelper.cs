@@ -6,8 +6,6 @@
  * > Depending on `StrictEnum`
  */
 
-#if STMG_UITOOLKIT_EXISTS
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -192,5 +190,3 @@ namespace SatorImaging.UnityFundamentals
 
     }
 }
-
-#endif
