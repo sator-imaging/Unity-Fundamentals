@@ -22,6 +22,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Xml.Linq;
 using UnityEditor;
@@ -34,7 +35,7 @@ namespace SatorImaging.UnityFundamentals.Editor
 {
     public static class ApiDocumentationCollector
     {
-        public static NugetClient Client { get; set; } = NugetClient.Default;
+        public static NugetClient Client { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; set; } = NugetClient.Default;
 
         readonly static string[] FRAMEWORK_PATHS = new[]
         {
@@ -144,31 +145,19 @@ namespace SatorImaging.UnityFundamentals.Editor
                     TempPath = Path.GetFileName(TempPath);
                 }
 
+                string result;
+
 #if UNITY_EDITOR_WIN
                 TempPath = TempPath.Replace('/', '\\');
                 OutputPath = OutputPath.Replace('/', '\\');
 
-                var result = $"copy \"{(TempPath + '\"'),-72} \"{OutputPath}\"\n";
-
-                var outputDirPath = Path.GetDirectoryName(OutputPath);
-                if (!Directory.Exists(outputDirPath))
-                {
-                    result = $"mkdir \"{outputDirPath}\"\n{result}";
-                }
-
-                return result;
+                result = $"copy \"{(TempPath + '\"'),-72} \"{OutputPath}\"\n";
 
 #else
-                var result = $"cp \"{(TempPath + '\"'),-72} \"{OutputPath}\"\n";
-
-                var outputDirPath = Path.GetDirectoryName(OutputPath);
-                if (!Directory.Exists(outputDirPath))
-                {
-                    result = $"mkdir \"{outputDirPath}\"\n{result}";
-                }
+                result = $"cp \"{(TempPath + '\"'),-72} \"{OutputPath}\"\n";
+#endif
 
                 return result;
-#endif
             }
         }
 
@@ -192,7 +181,7 @@ namespace SatorImaging.UnityFundamentals.Editor
 
 
         [MenuItem(MENU_ROOT + "Explore Assembly Folder...", priority = MENU_PRIORITY_EXPLORE + 0)]
-        static void Explore_Download_Folder()
+        static void Explore_Assembly_Folder()
         {
             var path = GetTargetFolderFullPath(TARGET_FOLDER);
             Logging(LogType.Log, path);

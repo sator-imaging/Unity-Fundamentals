@@ -23,10 +23,19 @@ namespace SatorImaging.UnityFundamentals.Editor
         const string MIME_JSON = @"application/json";
         const string MIME_ZIP = @"application/zip";
 
-        /// <summary><c>0:</c> packageName</summary>
+        /// <summary>
+        /// <list type="table">
+        /// <item>0: package name</item>
+        /// </list>
+        /// </summary>
         readonly static string NUGET_PACKAGE_EP = @"https://api.nuget.org/v3-flatcontainer/{0}/index.json";
 
-        /// <summary><c>0:</c> packageName / <c>1:</c> semantic version</summary>
+        /// <summary>
+        /// <list type="table">
+        /// <item>0: package name</item>
+        /// <item>1: semantic version</item>
+        /// </list>
+        /// </summary>
         readonly static string NUGET_DOWNLOAD_URL = @"https://www.nuget.org/api/v2/package/{0}/{1}";
 
         // TODO: grab files from here: https://github.com/dotnet/dotnet-api-docs/tree/main/xml
@@ -41,7 +50,7 @@ namespace SatorImaging.UnityFundamentals.Editor
         }
 
 
-        public static NugetClient Default { get; } = new();
+        public static NugetClient Default { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; } = new();
 
 
         /*  logger  ================================================================ */
@@ -85,6 +94,7 @@ namespace SatorImaging.UnityFundamentals.Editor
         private string b_tempFolderPath = Path.Combine(Path.GetTempPath(), TEMP_DIR_NAME).Replace('\\', '/');
         public string TempFolderPath
         {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => b_tempFolderPath;
             set
             {
@@ -115,16 +125,20 @@ namespace SatorImaging.UnityFundamentals.Editor
         private HttpClient? b_httpClient;
         public HttpClient HttpClient
         {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => b_httpClient ??= new();
             set
             {
-                b_httpClient?.CancelPendingRequests();
-                b_httpClient?.Dispose();
+                if (b_httpClient != null)
+                {
+                    b_httpClient.CancelPendingRequests();
+                    b_httpClient.Dispose();
+                }
                 b_httpClient = value ?? throw new ArgumentNullException(nameof(value));
             }
         }
 
-        public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(10);
+        public TimeSpan Timeout { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; set; } = TimeSpan.FromSeconds(10);
 
 
         /// <returns><see langword="false"/> if failed.</returns>
@@ -193,6 +207,11 @@ namespace SatorImaging.UnityFundamentals.Editor
                     var json = await GET.Content.ReadAsStringAsync();
                     var response = JsonUtility.FromJson<Response>(json);
 
+                    if (response.versions?.Length == 0)
+                    {
+                        response.versions = null;
+                    }
+
                     return response.versions;
                 }
             }
@@ -229,11 +248,11 @@ namespace SatorImaging.UnityFundamentals.Editor
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(MIME_ZIP));
 
-            var RES = await client.GetAsync(url, cancellationToken);
-            if (!RES.IsSuccessStatusCode)
+            var GET = await client.GetAsync(url, cancellationToken);
+            if (!GET.IsSuccessStatusCode)
                 return null;
 
-            var data = await RES.Content.ReadAsByteArrayAsync();
+            var data = await GET.Content.ReadAsByteArrayAsync();
 
             await File.WriteAllBytesAsync(outputFilePath, data, cancellationToken);
             return outputFilePath;
