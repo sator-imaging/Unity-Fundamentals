@@ -19,7 +19,7 @@ Add the following `git URL` in Unity Package Manager (UPM)
 
 ## Release version
 ```
-https://github.com/sator-imaging/Unity-Fundamentals.git#v1.2.0
+https://github.com/sator-imaging/Unity-Fundamentals.git#v1.3.0
 ```
 <sup>&nbsp; Append desired version at the end. (`#vX.Y.Z`)</sup>
 
@@ -216,6 +216,13 @@ And also there is option to delay event to correctly handle dropdown event.
 
 
 ## Unity Editor Scripts
+
+### C# API Documentation for IDE
+Download C# API Documentation from Nuget.org.
+[📘](Editor/Nuget)
+
+License: <strong>Apache License version 2.0</strong>
+
 
 ### `UnityEditorMainToolbar`
 Provide access to `VisualElement` in Unity main toolbar.
