@@ -19,7 +19,7 @@ Add the following `git URL` in Unity Package Manager (UPM)
 
 ## Release version
 ```
-https://github.com/sator-imaging/Unity-Fundamentals.git#v1.3.0
+https://github.com/sator-imaging/Unity-Fundamentals.git#v1.3.1
 ```
 <sup>&nbsp; Append desired version at the end. (`#vX.Y.Z`)</sup>
 
