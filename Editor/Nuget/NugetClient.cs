@@ -3,6 +3,7 @@
 // https://github.com/sator-imaging/Unity-Fundamentals
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -23,6 +24,9 @@ namespace SatorImaging.UnityFundamentals.Editor
         const string MIME_JSON = @"application/json";
         const string MIME_ZIP = @"application/zip";
 
+        readonly static MediaTypeWithQualityHeaderValue HEADER_JSON = new(MIME_JSON);
+        readonly static MediaTypeWithQualityHeaderValue HEADER_ZIP = new(MIME_ZIP);
+
         /// <summary>
         /// <list type="table">
         /// <item>0: package name</item>
@@ -42,6 +46,7 @@ namespace SatorImaging.UnityFundamentals.Editor
         //       or build from source: https://github.com/dotnet/standard/tree/v2.1.0
         readonly static string FALLBACK_PACKAGE_NAME = "SatorImaging.CSharpApiDocumentation";
 
+        readonly static Dictionary<string, string> cache_urlByPackageName = new(capacity: 32);
 
         [Serializable]
         public sealed class Response
@@ -129,12 +134,19 @@ namespace SatorImaging.UnityFundamentals.Editor
             get => b_httpClient ??= new();
             set
             {
+                if (value == null)
+                    throw new ArgumentNullException(nameof(value));
+
+                if (value == b_httpClient)
+                    return;
+
                 if (b_httpClient != null)
                 {
                     b_httpClient.CancelPendingRequests();
                     b_httpClient.Dispose();
                 }
-                b_httpClient = value ?? throw new ArgumentNullException(nameof(value));
+
+                b_httpClient = value;
             }
         }
 
@@ -165,6 +177,14 @@ namespace SatorImaging.UnityFundamentals.Editor
         /// <returns><see langword="null"/> if package is not found.</returns>
         public async ValueTask<string?> TryGetPackageUrlAsync(string packageName, string? targetVersion, CancellationToken cancellationToken = default)
         {
+            if (targetVersion == null)
+            {
+                if (cache_urlByPackageName.TryGetValue(packageName, out var cachedUrl))
+                {
+                    return cachedUrl;
+                }
+            }
+
             var versions = await TryGetAvailableVersionAsync(packageName, cancellationToken);
 
             string? foundVersion = null;
@@ -184,43 +204,43 @@ namespace SatorImaging.UnityFundamentals.Editor
                 return null;
             }
 
-            return string.Format(NUGET_DOWNLOAD_URL, packageName, foundVersion);
+            var url = string.Format(NUGET_DOWNLOAD_URL, packageName, foundVersion);
+            cache_urlByPackageName[packageName] = url;
+            return url;
         }
 
 
         /// <returns><see langword="null"/> if failed to retrieve package versions.</returns>
         public async ValueTask<string[]?> TryGetAvailableVersionAsync(string packageName, CancellationToken cancellationToken = default)
         {
-            Logger.Logging(LogType.Log, $"[NuGet] fetching nuget.org for package information: {packageName}");
-
             var client = HttpClient;
             client.DefaultRequestHeaders.Accept.Clear();
-            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(MIME_JSON));
+            client.DefaultRequestHeaders.Accept.Add(HEADER_JSON);
 
             try
             {
                 var endpoint = string.Format(NUGET_PACKAGE_EP, packageName);
+                Logger.Logging(LogType.Log, $"[NuGet] fetching nuget.org for package information: {packageName}\n{endpoint}\n");
 
                 var GET = await client.GetAsync(endpoint, cancellationToken);
-                if (GET.IsSuccessStatusCode)
+                if (!GET.IsSuccessStatusCode)
+                    return null;
+
+                var json = await GET.Content.ReadAsStringAsync();
+                var response = JsonUtility.FromJson<Response>(json);
+
+                if (response.versions?.Length == 0)
                 {
-                    var json = await GET.Content.ReadAsStringAsync();
-                    var response = JsonUtility.FromJson<Response>(json);
-
-                    if (response.versions?.Length == 0)
-                    {
-                        response.versions = null;
-                    }
-
-                    return response.versions;
+                    response.versions = null;
                 }
+
+                return response.versions;
             }
             catch (Exception error)
             {
                 Logger.Logging(LogType.Warning, error);
+                return null;
             }
-
-            return null;
         }
 
 
@@ -244,18 +264,39 @@ namespace SatorImaging.UnityFundamentals.Editor
             if (!Directory.Exists(cacheDirPath))
                 Directory.CreateDirectory(cacheDirPath);
 
-            var client = HttpClient;
-            client.DefaultRequestHeaders.Accept.Clear();
-            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(MIME_ZIP));
-
-            var GET = await client.GetAsync(url, cancellationToken);
-            if (!GET.IsSuccessStatusCode)
+            var data = await TryDownloadPackageAsync(url, cancellationToken);
+            if (data == null)
                 return null;
-
-            var data = await GET.Content.ReadAsByteArrayAsync();
 
             await File.WriteAllBytesAsync(outputFilePath, data, cancellationToken);
             return outputFilePath;
+        }
+
+
+        /// <returns><see langword="null"/> if failed or canceled.</returns>
+        public async ValueTask<byte[]?> TryDownloadPackageAsync(string url, CancellationToken cancellationToken = default)
+        {
+            var client = HttpClient;
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(HEADER_ZIP);
+
+            try
+            {
+                var GET = await client.GetAsync(url, cancellationToken);
+                if (!GET.IsSuccessStatusCode)
+                    return null;
+
+                var result = await GET.Content.ReadAsByteArrayAsync();
+                if (result?.Length == 0)
+                    result = null;
+
+                return result;
+            }
+            catch (Exception error)
+            {
+                Logger.Logging(LogType.Warning, error);
+                return null;
+            }
         }
 
     }

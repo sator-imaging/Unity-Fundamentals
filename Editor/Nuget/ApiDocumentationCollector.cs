@@ -11,10 +11,6 @@
 //#undef UNITY_EDITOR_WIN
 //#undef UNITY_EDITOR_OSX
 
-#if UNITY_EDITOR_WIN && UNITY_6000_0_OR_NEWER == false
-#define __UNITY_REF_ASSEMBLIES
-#endif
-
 using System;
 using System.Buffers;
 using System.Collections.Generic;
@@ -52,25 +48,13 @@ namespace SatorImaging.UnityFundamentals.Editor
             "/net",     // .net framework
         };
 
-        public readonly static string TARGET_FOLDER =
-#if __UNITY_REF_ASSEMBLIES
-            @"UnityReferenceAssemblies"
-#else
-            // for VS Code on macOS
-            @"NetStandard"
-#endif
-            ;
-        readonly static string MERGE_TARGET_FOLDER_SLASH =
-#if __UNITY_REF_ASSEMBLIES
-            "/Facades/"
-#else
-            // merge all
-            "/"
-#endif
+        readonly static (string targetFolder, string mergeFolder)[] TARGET_DATA = new[]
+        {
+            (@"UnityReferenceAssemblies", "/Facades/"),
+            (@"NetStandard", "/"),  // merge all
+        };
 
-            ;
-
-        readonly static string EXCLUDED_SUB_DIR = "/unity-engine-api/";
+        readonly static string EXCLUDED_SUB_DIR_SLASH = "/unity-engine-api/";
 
         const string X_DECLARATION = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
         const string X_DOC = "doc";
@@ -170,20 +154,20 @@ namespace SatorImaging.UnityFundamentals.Editor
         const int MENU_PRIORITY_EXPLORE = int.MaxValue - 310;
 
         // Unity 6 automatically sort menu items... need to explicitly specify order by priority.
-        [MenuItem(MENU_PATH + "Japanese", priority = MENU_PRIORITY_DL + 0)] static void Download_Documentation_JA() => Download_Confirm_Dialog(TARGET_FOLDER, "ja");
-        [MenuItem(MENU_PATH + "English", priority = MENU_PRIORITY_DL + 1)] static void Download_Documentation_EN() => Download_Confirm_Dialog(TARGET_FOLDER, null);
+        [MenuItem(MENU_PATH + "Japanese", priority = MENU_PRIORITY_DL + 0)] static void Download_Documentation_JA() => Download_Confirm_Dialog("ja");
+        [MenuItem(MENU_PATH + "English", priority = MENU_PRIORITY_DL + 1)] static void Download_Documentation_EN() => Download_Confirm_Dialog(null);
         // following languages are not tested but should work.
-        [MenuItem(MENU_PATH + "Deutsch", priority = MENU_PRIORITY_DL + 2)] static void Download_Documentation_DE() => Download_Confirm_Dialog(TARGET_FOLDER, "de");
-        [MenuItem(MENU_PATH + "French", priority = MENU_PRIORITY_DL + 3)] static void Download_Documentation_FR() => Download_Confirm_Dialog(TARGET_FOLDER, "fr");
-        [MenuItem(MENU_PATH + "Spanish", priority = MENU_PRIORITY_DL + 4)] static void Download_Documentation_ES() => Download_Confirm_Dialog(TARGET_FOLDER, "es");
-        [MenuItem(MENU_PATH + "Chinese", priority = MENU_PRIORITY_DL + 5)] static void Download_Documentation_ZH() => Download_Confirm_Dialog(TARGET_FOLDER, "zh");
-        [MenuItem(MENU_PATH + "Korean", priority = MENU_PRIORITY_DL + 6)] static void Download_Documentation_KO() => Download_Confirm_Dialog(TARGET_FOLDER, "ko");
+        [MenuItem(MENU_PATH + "Deutsch", priority = MENU_PRIORITY_DL + 2)] static void Download_Documentation_DE() => Download_Confirm_Dialog("de");
+        [MenuItem(MENU_PATH + "French", priority = MENU_PRIORITY_DL + 3)] static void Download_Documentation_FR() => Download_Confirm_Dialog("fr");
+        [MenuItem(MENU_PATH + "Spanish", priority = MENU_PRIORITY_DL + 4)] static void Download_Documentation_ES() => Download_Confirm_Dialog("es");
+        [MenuItem(MENU_PATH + "Chinese", priority = MENU_PRIORITY_DL + 5)] static void Download_Documentation_ZH() => Download_Confirm_Dialog("zh");
+        [MenuItem(MENU_PATH + "Korean", priority = MENU_PRIORITY_DL + 6)] static void Download_Documentation_KO() => Download_Confirm_Dialog("ko");
 
 
         [MenuItem(MENU_ROOT + "Explore Assembly Folder...", priority = MENU_PRIORITY_EXPLORE + 0)]
         static void Explore_Assembly_Folder()
         {
-            var path = GetTargetFolderFullPath(TARGET_FOLDER);
+            var path = GetTargetFolderFullPath(".");
             Logging(LogType.Log, path);
             EditorUtility.RevealInFinder(path);
         }
@@ -202,7 +186,7 @@ namespace SatorImaging.UnityFundamentals.Editor
         }
 
 
-        static void Download_Confirm_Dialog(string targetFolder, string? language)
+        static void Download_Confirm_Dialog(string? language)
         {
             switch (EditorUtility.DisplayDialogComplex(
                     nameof(ApiDocumentationCollector),
@@ -226,7 +210,7 @@ namespace SatorImaging.UnityFundamentals.Editor
                     return;
             }
 
-            if (!TryDownloadApiDocumentation(targetFolder, language))
+            if (!TryDownloadApiDocumentation(language))
             {
                 Logging(LogType.Warning, $"[{nameof(ApiDocumentationCollector)}]: Operation canceled.");
             }
@@ -235,26 +219,52 @@ namespace SatorImaging.UnityFundamentals.Editor
 
         /*  CLI  ================================================================ */
 
-        /// <param name="targetFolder">See <see cref="TARGET_FOLDER"/></param>
+        /// <inheritdoc cref="TryDownloadApiDocumentationCore(string, string, List{BatchCommand}, string?)"/>
+        public static bool TryDownloadApiDocumentation(string? language)
+        {
+            var batchList = new List<BatchCommand>(capacity: 32);
+            string[] fallbackFilePaths = GetFallbackFilePaths();
+
+            int phase = 0;  //ummmm.....
+            foreach (var (targetFolder, mergeFolder) in TARGET_DATA)
+            {
+                phase++;
+                if (!TryDownloadApiDocumentationCore(ref phase, targetFolder, mergeFolder, language, batchList, fallbackFilePaths))
+                {
+                    return false;
+                }
+            }
+
+            RunAsAdministrator(batchList);
+
+            return true;
+        }
+
+
         /// <returns><see langword="false"/> if task is canceled.</returns>
         /// <exception cref="DirectoryNotFoundException"></exception>
-        public static bool TryDownloadApiDocumentation(string targetFolder, string? language = null)
+        static bool TryDownloadApiDocumentationCore(ref int phase,
+                                                    string targetFolder,
+                                                    string mergeFolder,
+                                                    string? language,
+                                                    List<BatchCommand> batchList,
+                                                    string[] fallbackFilePaths)
         {
             var targetDirPath = GetTargetFolderFullPath(targetFolder);
+
             if (!Directory.Exists(targetDirPath))
+            {
                 throw new DirectoryNotFoundException(targetDirPath);
+            }
 
-            string[] fallbackFilePaths = GetFallbackFilePaths();
-            var batchList = new List<BatchCommand>(capacity: 32);
-
-            // merge all available xml documents...!!
+            // merge all available xml documents...! per target folder!!
             var xmlRootMembers = new XElement(X_MEMBERS);
 
             try
             {
                 var dllFilePaths = Directory.EnumerateFiles(targetDirPath, '*' + EXT_DLL, ENUM_FILES_OPTIONS)
                                             .Select(x => x.Replace('\\', '/'))  // normalize!!
-                                            .Where(x => !x.Contains(EXCLUDED_SUB_DIR, StringComparison.OrdinalIgnoreCase))  //TODO
+                                            .Where(x => !x.Contains(EXCLUDED_SUB_DIR_SLASH, StringComparison.OrdinalIgnoreCase))  //TODO
                                             ;
 
                 int totalCount = dllFilePaths.Count();
@@ -268,7 +278,7 @@ namespace SatorImaging.UnityFundamentals.Editor
                     var assemblyName = Path.GetFileNameWithoutExtension(dllFilePath);
 
                     if (EditorUtility.DisplayCancelableProgressBar(
-                            nameof(ApiDocumentationCollector),
+                            $"[{phase} of {TARGET_DATA.Length * 2}] {nameof(ApiDocumentationCollector)}",
                             $"[{currentIndex + 1} of {totalCount}] Processing...: {assemblyName}",
                             (float)currentIndex / totalCount))
                     {
@@ -280,7 +290,7 @@ namespace SatorImaging.UnityFundamentals.Editor
                     {
                         batchList.Add(batchCommand.Value);
 
-                        if (dllFilePath.Contains(MERGE_TARGET_FOLDER_SLASH, StringComparison.OrdinalIgnoreCase))
+                        if (dllFilePath.Contains(mergeFolder, StringComparison.OrdinalIgnoreCase))
                         {
                             var xdoc = XDocument.Load(batchCommand.Value.TempPath);
                             foreach (var elem in xdoc.Root.Element(X_MEMBERS).Elements())
@@ -301,12 +311,11 @@ namespace SatorImaging.UnityFundamentals.Editor
                 xdoc_merged.Root.Add(xmlRootMembers);
                 //xdoc_merged.Declaration = new XDeclaration("1.0", "utf-8", "yes");
 
-                if (!TryGenerateMissingApiDocument(xdoc_merged, missingXmlDocFilePaths, batchList))
+                phase++;
+                if (!TryGenerateMissingApiDocument(ref phase, xdoc_merged, missingXmlDocFilePaths, batchList))
                 {
                     return false;
                 }
-
-                RunAsAdministrator(batchList);
             }
             finally
             {
@@ -318,7 +327,10 @@ namespace SatorImaging.UnityFundamentals.Editor
 
         // NOTE: must be run after all packages were processed.
         /// <returns><see langword="false"/> if task is canceled.</returns>
-        static bool TryGenerateMissingApiDocument(XDocument xdoc, List<string> missingXmlDocFilePaths, List<BatchCommand> batchList)
+        static bool TryGenerateMissingApiDocument(ref int phase,
+                                                  XDocument xdoc,
+                                                  List<string> missingXmlDocFilePaths,
+                                                  List<BatchCommand> batchList)
         {
             try
             {
@@ -332,7 +344,7 @@ namespace SatorImaging.UnityFundamentals.Editor
                     var assemblyName = Path.GetFileNameWithoutExtension(dllFilePath);
 
                     if (EditorUtility.DisplayCancelableProgressBar(
-                            nameof(ApiDocumentationCollector),
+                            $"[{phase} of {TARGET_DATA.Length * 2}] {nameof(ApiDocumentationCollector)}",
                             $"[{currentIndex + 1} of {totalCount}] Finishing...: {assemblyName}",
                             (float)currentIndex / totalCount))
                     {
@@ -580,7 +592,7 @@ namespace SatorImaging.UnityFundamentals.Editor
 
                 fs.Write(ENCODER.GetBytes($"pushd \"{Client.TempFolderPath}\"\n"));
 
-                foreach (var batch in batchList.OrderBy(x => x.TempPath).ThenBy(x => x.OutputPath))
+                foreach (var batch in batchList.OrderBy(x => x.OutputPath).ThenBy(x => x.TempPath))
                 {
                     fs.Write(ENCODER.GetBytes(batch.GetBatchCommand()));
                 }
@@ -596,7 +608,11 @@ namespace SatorImaging.UnityFundamentals.Editor
 
 #if UNITY_EDITOR_WIN == false
             using var CHMOD = Process.Start("/bin/sh", $"-c \"chmod +x \\\"{batchFilePath}\\\"\"");
-            if (!CHMOD.HasExited || CHMOD.ExitCode != 0)
+
+            while (!CHMOD.HasExited)
+            { }
+
+            if (CHMOD.ExitCode != 0)
             {
                 throw new Exception("Failed: /bin/sh chmod +x");
             }
