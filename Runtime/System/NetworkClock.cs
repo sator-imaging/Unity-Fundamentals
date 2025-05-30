@@ -55,7 +55,7 @@ namespace SatorImaging.UnityFundamentals
             CancellationToken cancellationToken = default
             )
         {
-            DateTimeOffset result = default;
+            DateTimeOffset result = DateTimeOffset.MinValue;
 
             do
             {
@@ -109,6 +109,8 @@ namespace SatorImaging.UnityFundamentals
 
                 if (GetElapsedTime(connectionStartAt) > ResponseDelayThreshold)
                 {
+                    result = DateTimeOffset.MinValue;
+
                     checked
                     {
                         retryCount--;
@@ -120,7 +122,7 @@ namespace SatorImaging.UnityFundamentals
             }
             while (retryCount > 0);
 
-            if (result == default)
+            if (result == DateTimeOffset.MinValue)
             {
                 NetworkClockException.Throw("failed to retrieve date from https HEAD request");
             }
@@ -160,6 +162,11 @@ namespace SatorImaging.UnityFundamentals
         }
 
 
+        public static TimeSpan ResponseDelayThreshold { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; set; } = TimeSpan.FromSeconds(7);
+
+        public static int SslConnectionPort { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; set; } = 443;
+
+
         /*  public  ================================================================ */
 
         readonly static double TimestampToTicks = (double)TimeSpan.TicksPerSecond / Stopwatch.Frequency;
@@ -173,13 +180,8 @@ namespace SatorImaging.UnityFundamentals
         }
 
 
-        public static TimeSpan ResponseDelayThreshold { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; set; } = TimeSpan.FromSeconds(7);
-
-        public static int SslConnectionPort { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; set; } = 443;
-
-
         /// <param name="timestamp"><c>-1</c> to use current timestamp.</param>
-        public static NetworkClock Create(DateTimeOffset origin, TimeSpan timeZoneOffset, long timestamp = -1)
+        internal static NetworkClock Create(DateTimeOffset origin, TimeSpan timeZoneOffset, long timestamp = -1)
         {
             if (timestamp <= 0)
                 timestamp = Stopwatch.GetTimestamp();
@@ -207,11 +209,7 @@ namespace SatorImaging.UnityFundamentals
         readonly DateTimeOffset origin;
         readonly long timestamp;
 
-        NetworkClock(DateTimeOffset origin)
-        {
-            this.origin = origin;
-            this.timestamp = Stopwatch.GetTimestamp();
-        }
+        NetworkClock(DateTimeOffset origin) : this(origin, Stopwatch.GetTimestamp()) { }
 
         NetworkClock(DateTimeOffset origin, long timestamp)
         {
