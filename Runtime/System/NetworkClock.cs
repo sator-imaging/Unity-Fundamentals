@@ -68,7 +68,7 @@ namespace SatorImaging.UnityFundamentals
 
                 await ssl.AuthenticateAsClientAsync(host);
 
-                var cert = ssl.RemoteCertificate as X509Certificate2;
+                using var cert = ssl.RemoteCertificate as X509Certificate2;
                 if (cert == null)
                 {
                     NetworkClockException.Throw("certificate cannot be retrieved: " + host);
