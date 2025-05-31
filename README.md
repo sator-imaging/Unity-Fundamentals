@@ -155,7 +155,7 @@ Job runner for Unity providing reliable un-async-ing functions and more.
 ### `NetworkClock`
 Believe-worthy, device-independent time provider based on `HTTPS` connection.
 [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/System/NetworkClock.cs.html)
-[解説](https://zenn.dev/sator_imaging/articles/6e1bd822a82d31)
+or [解説](https://zenn.dev/sator_imaging/articles/6e1bd822a82d31)
 
 
 ### `ThreadSafeSingleton`
@@ -192,7 +192,7 @@ Reliable nullable (`??` `?.` ~~`??=`~~) support for `UnityEngine.Object`.
 Provides functions that avoid creating leaked managed shell.
 [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/UnityObject/ManagedShell.cs.html)
 or [解説その１](https://qiita.com/sator_imaging/items/6bca6c642b6347bd68d8)
-[その２](https://qiita.com/sator_imaging/items/1251fa3a0b51db87a82f)
+   [その２](https://qiita.com/sator_imaging/items/1251fa3a0b51db87a82f)
 
 
 ### `PoolableBehaviour<T>`
@@ -226,7 +226,7 @@ And also there is option to delay event to correctly handle dropdown event.
 ### UPM Package Test Kit
 Generate clean environment and build script for selected UPM packages.
 [📘](Editor/UpmPackage)
-[日本語マニュアル](https://zenn.dev/sator_imaging/articles/feadbd5b1281d8)
+or [日本語マニュアル](https://zenn.dev/sator_imaging/articles/feadbd5b1281d8)
 
 
 ### C# API Documentation for IDE
