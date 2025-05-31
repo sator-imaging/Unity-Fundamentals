@@ -152,6 +152,12 @@ Job runner for Unity providing reliable un-async-ing functions and more.
 **TODO**: documentation for `OnMainThread`, `InThreadPool`, `SetExceptionHandler`, `GetTimerToken`, `GetElapsedTime`, `Shutdown`, `CreateNewScheduler`, `SetConcurrentThreadCount`
 
 
+### `NetworkClock`
+Believe-worthy, device-independent time provider based on `HTTPS` connection.
+[📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/System/NetworkClock.cs.html)
+[解説](https://zenn.dev/sator_imaging/articles/6e1bd822a82d31)
+
+
 ### `ThreadSafeSingleton`
 Thread! safe!! singleton!!!
 [日本語版](https://qiita.com/sator_imaging/items/6c60e462417a5235778a)
