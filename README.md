@@ -223,6 +223,12 @@ And also there is option to delay event to correctly handle dropdown event.
 
 ## Unity Editor Scripts
 
+### UPM Package Test Kit
+Generate clean environment and build script for selected UPM packages.
+[📘](Editor/UpmPackageTestKit)
+[日本語マニュアル](https://zenn.dev/sator_imaging/articles/feadbd5b1281d8)
+
+
 ### C# API Documentation for IDE
 Download C# API Documentation from Nuget.org.
 [📘](Editor/Nuget)
