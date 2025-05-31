@@ -9,8 +9,8 @@ How to Use
 ```cs
 // initiate once on startup.
 m_clock = new("your-server-address",
-              (message, cert, chain, errors) => { ...verify certificate... },
-              timeZoneOffset: TimeSpan.FromHours(9));
+              timeZoneOffset: TimeSpan.FromHours(9),
+              (message, cert, chain, errors) => { ...verify certificate... });
 
 var currentTime = m_clock.Now;  // or .UtcNow
 ```
