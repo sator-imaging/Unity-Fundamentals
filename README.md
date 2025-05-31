@@ -225,7 +225,7 @@ And also there is option to delay event to correctly handle dropdown event.
 
 ### UPM Package Test Kit
 Generate clean environment and build script for selected UPM packages.
-[📘](Editor/UpmPackageTestKit)
+[📘](Editor/UpmPackage)
 [日本語マニュアル](https://zenn.dev/sator_imaging/articles/feadbd5b1281d8)
 
 
