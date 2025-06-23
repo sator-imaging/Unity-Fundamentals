@@ -21,6 +21,7 @@ namespace SatorImaging.UnityFundamentals
     //       to make concurrent operation more efficient, blocking op must be removed to free up worker threads to other.
     //       * to do so, create 1 sentinel thread to watch concurrently running job count.
     //         and when some job is finished, sentinel will dispatch another job up to specified concurrent level.
+    [Obsolete("Use `UniAsync` instead.", true)]
     public static class Run
     {
 #if UNITY_EDITOR
