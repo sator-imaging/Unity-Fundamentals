@@ -1,6 +1,8 @@
 # Unity Scripting Fundamentals
 
-🇯🇵 [日本語版](https://qiita.com/sator_imaging/items/235c8447f4171ba5a522)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/sator-imaging/Unity-Fundamentals)
+&nbsp;
+<sup>🇯🇵 [日本語版](https://qiita.com/sator_imaging/items/235c8447f4171ba5a522)</sup>
 
 Fundamental scripting library for Unity designed to be minimal, efficient & dependency-free as possible.
 Most of scripts are C# / .NET compliant. See `using` statements in `.cs` files for details.
