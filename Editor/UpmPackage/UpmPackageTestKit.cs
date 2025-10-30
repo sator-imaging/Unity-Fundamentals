@@ -121,7 +121,7 @@ if NOT EXIST ""{3}"" (
         const string TMPL_RUN_ALL_CMD =
 @"@echo off
 
-set /p PAUSE=Press 'Enter' to start building test apps...
+timeout 10
 
 echo.
 
