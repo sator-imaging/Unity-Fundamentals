@@ -40,7 +40,7 @@ https://github.com/sator-imaging/Unity-Fundamentals.git
 ### Fibers
 Microthreading Library for .NET / Unity
 [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/Threading/Fibers.cs.html)
-or 日本語版
+or [日本語版](https://zenn.dev/sator_imaging/articles/0236e98fbbbc98)
 
 
 ### Non-Alloc String Splitter
