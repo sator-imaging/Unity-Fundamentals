@@ -321,6 +321,9 @@ namespace SatorImaging.UnityFundamentals
         }
 
 
+        /// <summary>
+        /// An enumerator that generates tasks for the fibers.
+        /// </summary>
         sealed class Generator
             : IEnumerator<(Payload, Func<Payload, Task<Instruction>>)>
         {
