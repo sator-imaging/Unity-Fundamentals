@@ -120,7 +120,7 @@ namespace SatorImaging.UnityFundamentals
         /// </summary>
         public int RemainingTaskCount => generator.RemainingTaskCount;
         /// <summary>
-        /// Is the scheduler running?
+        /// Whether the scheduler is running.
         /// </summary>
         public bool IsRunning => interlock_isRunning != 0;
 
