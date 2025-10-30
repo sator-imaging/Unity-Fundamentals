@@ -9,7 +9,7 @@ Basic Usage
 ===========
 ```cs
 // create fibers based on the array
-var fibers = Fibers.ForEach(
+await using var fibers = Fibers.ForEach(
     concurrency: 4,
     tonsOfUrls
     async (url) =>
