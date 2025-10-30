@@ -6,3 +6,5 @@
 
 **/BenchmarkDotNet.Artifacts/
 **/Photoshop/
+
+!.github
