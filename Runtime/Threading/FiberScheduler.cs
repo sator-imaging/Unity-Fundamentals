@@ -41,23 +41,42 @@ namespace SatorImaging.UnityFundamentals
         /// </summary>
         public static FiberScheduler Default { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; }
 
-        /// <summary>
-        /// Did you deeply consider running priority task by using <see cref="Task.Run(Action)"/> or  <c>await</c>?
-        /// </summary>
+        /// <remarks>
+        /// > [!TIP]
+        /// > Did you deeply consider running priority task by using <see cref="Task.Run(Action)"/> or <c>await</c>?
+        /// </remarks>
         public static FiberScheduler Priority { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; }
 
         static FiberScheduler()
         {
             int processorCount = Environment.ProcessorCount;
 
-            Default = new(processorCount);
-
             Priority = new(processorCount)
             {
+                State = "<Priority>",
                 AutoRetryOnError = true,
             };
-            Priority.OnWillConsume += () => Default.Suspend();
-            Priority.OnDidConsume += () => Default.Resume();
+
+            Default = new(processorCount)
+            {
+                State = "<Default>",
+            };
+
+            // NOTE: DO NOT delete the DEBUG() call in event.
+            //       --> on startup, event will resumes slept default scheduler and then default
+            //           scheduler will emit redundant log.
+            //           without event log, it seems that 2 default scheduler runs simultaneously.
+            //       * it's not good idea to use Task.Run to wait initialization in thread pool.
+            Priority.OnWillConsume += () =>
+            {
+                DEBUG($"{nameof(Priority)} scheduler suspends {nameof(Default)} scheduler");
+                Default.Suspend();
+            };
+            Priority.OnDidConsume += () =>
+            {
+                DEBUG($"{nameof(Priority)} scheduler resumes {nameof(Default)} scheduler");
+                Default.Resume();
+            };
         }
 
 
@@ -88,6 +107,13 @@ namespace SatorImaging.UnityFundamentals
             set => fibers.Concurrency = value;
         }
 
+        public object? State
+        {
+            get => fibers.State;
+            set => fibers.State = value;
+        }
+
+
         /// <summary>
         /// Invoked before consuming a task.
         /// </summary>
@@ -103,10 +129,10 @@ namespace SatorImaging.UnityFundamentals
         public bool AutoRetryOnError { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; set; }
 
 
-        /// <summary>
+        /// <remarks>
         /// > [!NOTE]
-        /// > This method *won't* resume suspended scheduler.
-        /// </summary>
+        /// > This method will not resume a suspended scheduler. Call <see cref="Resume()"/> explicitly if needed.
+        /// </remarks>
         public void Schedule(Payload state, Func<Payload, Task<Instruction>> factory)
         {
             generator.Schedule(state, factory);
@@ -172,6 +198,8 @@ namespace SatorImaging.UnityFundamentals
         {
             ThreadPool.UnsafeQueueUserWorkItem(static async (obj) =>
             {
+                const string NO_STATE = "NO STATE AVAILABLE";
+
                 var self = (FiberScheduler)obj;
                 var fibers = self.fibers;
 
@@ -224,7 +252,7 @@ namespace SatorImaging.UnityFundamentals
                         throw new Exception("must not be reached");
                     }
 
-                    DEBUG($"Waiting for new task... (thread: {Environment.CurrentManagedThreadId})");
+                    DEBUG($"{nameof(FiberScheduler)} '{self.State ?? NO_STATE}' is waiting for new task... (thread: {Environment.CurrentManagedThreadId})");
 
                     await stopper.Task;
                     goto RESTART;
@@ -235,12 +263,13 @@ namespace SatorImaging.UnityFundamentals
 
                     if (self.AutoRetryOnError)
                     {
-                        if (!invoked_onDidConsume)
+                        // need a delay to have finally block executed before auto retry
+                        _ = Task.Run(async () =>
                         {
-                            self.OnDidConsume?.Invoke();
-                        }
+                            await Task.Delay(1000);
+                            self.CreateConsumingThread();
+                        });
 
-                        _ = Task.Run(self.CreateConsumingThread);
                         return;
                     }
 
@@ -260,7 +289,7 @@ namespace SatorImaging.UnityFundamentals
                         self.Suspend();  // set necessary internal states
                     }
 
-                    DEBUG($"Exiting consuming thread...");
+                    DEBUG($"{nameof(FiberScheduler)} '{self.State ?? NO_STATE}' is exiting consuming thread...");
                 }
             },
             this);
@@ -295,11 +324,8 @@ namespace SatorImaging.UnityFundamentals
                 this.State = State;
             }
 
-            /// <inheritdoc/>
             public override int GetHashCode() => HashCode.Combine(this.Value, this.State);
-            /// <inheritdoc/>
             public override bool Equals(object? obj) => obj is Payload other && Equals(other);
-            /// <inheritdoc/>
             public bool Equals(Payload other)
             {
                 return other.Value == Value
@@ -324,9 +350,6 @@ namespace SatorImaging.UnityFundamentals
         }
 
 
-        /// <summary>
-        /// An enumerator that generates tasks for the fibers.
-        /// </summary>
         sealed class Generator
             : IEnumerator<(Payload, Func<Payload, Task<Instruction>>)>
         {
