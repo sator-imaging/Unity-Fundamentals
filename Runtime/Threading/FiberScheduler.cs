@@ -21,6 +21,9 @@ using System.Threading.Tasks;
 
 namespace SatorImaging.UnityFundamentals
 {
+    /// <summary>
+    /// A scheduler for running tasks in fibers.
+    /// </summary>
     public class FiberScheduler
     {
         [Conditional("__logging")]
@@ -33,6 +36,9 @@ namespace SatorImaging.UnityFundamentals
         }
 
 
+        /// <summary>
+        /// The default scheduler.
+        /// </summary>
         public static FiberScheduler Default { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; }
 
         /// <summary>
@@ -60,6 +66,10 @@ namespace SatorImaging.UnityFundamentals
         readonly Generator generator;
         readonly Fibers<Payload, Instruction> fibers;
 
+        /// <summary>
+        /// Create a new instance of the <see cref="FiberScheduler"/> class.
+        /// </summary>
+        /// <param name="concurrency">The number of tasks to run in parallel.</param>
         public FiberScheduler(int concurrency)
         {
             this.generator = new();
@@ -69,15 +79,27 @@ namespace SatorImaging.UnityFundamentals
         }
 
 
+        /// <summary>
+        /// The number of tasks to run in parallel.
+        /// </summary>
         public int Concurrency
         {
             get => fibers.Concurrency;
             set => fibers.Concurrency = value;
         }
 
+        /// <summary>
+        /// Invoked before consuming a task.
+        /// </summary>
         public event Action? OnWillConsume;
+        /// <summary>
+        /// Invoked after all tasks are consumed.
+        /// </summary>
         public event Action? OnDidConsume;
 
+        /// <summary>
+        /// Automatically retry when an exception is thrown.
+        /// </summary>
         public bool AutoRetryOnError { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; set; }
 
 
@@ -93,13 +115,22 @@ namespace SatorImaging.UnityFundamentals
         }
 
 
+        /// <summary>
+        /// The number of tasks remaining in the queue.
+        /// </summary>
         public int RemainingTaskCount => generator.RemainingTaskCount;
+        /// <summary>
+        /// Is the scheduler running?
+        /// </summary>
         public bool IsRunning => interlock_isRunning != 0;
 
         volatile int interlock_isRunning;
         volatile int interlock_isThreadAlive;
         volatile TaskCompletionSource<bool>? interlock_stopper;
 
+        /// <summary>
+        /// Suspend the scheduler.
+        /// </summary>
         /// <returns>Remaining task count</returns>
         public int Suspend()
         {
@@ -110,6 +141,9 @@ namespace SatorImaging.UnityFundamentals
             return RemainingTaskCount;
         }
 
+        /// <summary>
+        /// Resume the scheduler.
+        /// </summary>
         public void Resume()
         {
             // always restart thread
@@ -235,20 +269,37 @@ namespace SatorImaging.UnityFundamentals
 
         /*  impl  ================================================================ */
 
+        /// <summary>
+        /// A payload for the task.
+        /// </summary>
         [StructLayout(LayoutKind.Auto)]
         public readonly struct Payload : IEquatable<Payload>
         {
-            public readonly long Value;  // ex. timestamp
+            /// <summary>
+            /// A value associated with the payload, ex. timestamp.
+            /// </summary>
+            public readonly long Value;
+            /// <summary>
+            /// The optional state of the task.
+            /// </summary>
             public readonly object? State;
 
+            /// <summary>
+            /// Create a new instance of the <see cref="Payload"/> struct.
+            /// </summary>
+            /// <param name="Value">A value associated with the payload, ex. timestamp.</param>
+            /// <param name="State">The optional state of the task.</param>
             public Payload(long Value, object? State)
             {
                 this.Value = Value;
                 this.State = State;
             }
 
+            /// <inheritdoc/>
             public override int GetHashCode() => HashCode.Combine(this.Value, this.State);
+            /// <inheritdoc/>
             public override bool Equals(object? obj) => obj is Payload other && Equals(other);
+            /// <inheritdoc/>
             public bool Equals(Payload other)
             {
                 return other.Value == Value
@@ -262,6 +313,7 @@ namespace SatorImaging.UnityFundamentals
 
         public enum Instruction
         {
+            /// <summary>Do nothing.</summary>
             None,
 
             /// <summary>Suspend scheduler immediately.</summary>
