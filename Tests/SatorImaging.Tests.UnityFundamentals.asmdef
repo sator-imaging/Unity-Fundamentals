@@ -1,0 +1,16 @@
+{
+    "name": "SatorImaging.Tests.UnityFundamentals",
+    "rootNamespace": "Tests must be written using FUnit",
+    "references": [],
+    "includePlatforms": [
+        "Stadia"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

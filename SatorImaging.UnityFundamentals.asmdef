@@ -6,19 +6,21 @@
         "UnityEditor.UI",
         "Unity.TextMeshPro",
         "Unity.TextMeshPro.Editor",
-        "SatorImaging.LambdaAssertions.Unity"
+        "LambdaAssertions.Unity"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
-    "overrideReferences": true,
-    "precompiledReferences": [
-        "nunit.framework.dll",
-        "SatorImaging.LambdaAssertions.dll"
-    ],
+    "overrideReferences": false,
+    "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [
+        {
+            "name": "Unity",
+            "expression": "0",
+            "define": "STMG_UNITYFUNDAMENTALS"
+        },
         {
             "name": "com.unity.textmeshpro",
             "expression": "0",
