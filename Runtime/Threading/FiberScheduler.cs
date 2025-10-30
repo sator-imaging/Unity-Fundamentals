@@ -276,7 +276,7 @@ namespace SatorImaging.UnityFundamentals
         public readonly struct Payload : IEquatable<Payload>
         {
             /// <summary>
-            /// A value associated with the payload, ex. timestamp.
+            /// A value associated with the payload (e.g., timestamp).
             /// </summary>
             public readonly long Value;
             /// <summary>
@@ -287,7 +287,7 @@ namespace SatorImaging.UnityFundamentals
             /// <summary>
             /// Create a new instance of the <see cref="Payload"/> struct.
             /// </summary>
-            /// <param name="Value">A value associated with the payload, ex. timestamp.</param>
+            /// <param name="Value">A value associated with the payload (e.g., timestamp).</param>
             /// <param name="State">The optional state of the task.</param>
             public Payload(long Value, object? State)
             {
@@ -311,6 +311,9 @@ namespace SatorImaging.UnityFundamentals
         }
 
 
+        /// <summary>
+        /// An instruction for the scheduler.
+        /// </summary>
         public enum Instruction
         {
             /// <summary>Do nothing.</summary>
