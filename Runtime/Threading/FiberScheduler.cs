@@ -131,7 +131,7 @@ namespace SatorImaging.UnityFundamentals
         /// <summary>
         /// Suspend the scheduler.
         /// </summary>
-        /// <returns>Remaining task count</returns>
+        /// <returns>The number of remaining tasks.</returns>
         public int Suspend()
         {
             Interlocked.Exchange(ref interlock_isRunning, 0);
