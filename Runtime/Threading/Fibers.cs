@@ -326,11 +326,6 @@ namespace SatorImaging.UnityFundamentals
                 FiberException.Throw("Cannot start while iterating over fibers");
             }
 
-            if (interlock_activeBackgroundTask != null)
-            {
-                return interlock_activeBackgroundTask;
-            }
-
             var activeTaskSource = new TaskCompletionSource<TaskResult>();
 
             var previous = Interlocked.CompareExchange(ref interlock_activeBackgroundTask, activeTaskSource.Task, null);
