@@ -1,6 +1,6 @@
 {
   "name": "com.sator-imaging.unity-scripting-fundamentals",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "unity": "2021.3",
   "displayName": "Unity Scripting Fundamentals",
   "description": "Fundamental Scripting Library for Unity",
@@ -16,7 +16,8 @@
   ],
   "dependencies": {
     "com.unity.ugui": "1.0.0",
-    "com.unity.modules.uielements": "1.0.0"
+    "com.unity.modules.uielements": "1.0.0",
+    "com.unity.nuget.mono-cecil": "1.11.5"
   },
   "repository": {
     "type": "git",
