@@ -21,6 +21,14 @@ using System.Threading.Tasks;
 
 namespace SatorImaging.UnityFundamentals
 {
+    // TODO: There is no reason to depend on the underlying Fibers instance.
+    //       simply, scheduler can hold the concurrent queue directly for the consuming thread.
+    //       - when new task is scheduled, call ConsumeTasks() to try starting consuming threads
+    //         until reaches to concurrency level.
+    //       - when the consuming thread completes executing task, then decrease consuming thread
+    //         count and try consuming new task if there are remaining tasks.
+    //         (use while or label jump to avoid recursive method call)
+
     /// <summary>
     /// A scheduler for running tasks in fibers.
     /// </summary>
