@@ -107,6 +107,9 @@ namespace SatorImaging.UnityFundamentals
             set => fibers.Concurrency = value;
         }
 
+        /// <summary>
+        /// An object that contains data about the scheduler.
+        /// </summary>
         public object? State
         {
             get => fibers.State;
@@ -129,6 +132,11 @@ namespace SatorImaging.UnityFundamentals
         public bool AutoRetryOnError { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; set; }
 
 
+        /// <summary>
+        /// Schedules a new task to be executed.
+        /// </summary>
+        /// <param name="state">The payload for the task.</param>
+        /// <param name="factory">The function that creates the task.</param>
         /// <remarks>
         /// > [!NOTE]
         /// > This method will not resume a suspended scheduler. Call <see cref="Resume()"/> explicitly if needed.
