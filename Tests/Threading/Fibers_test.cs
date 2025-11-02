@@ -84,7 +84,7 @@ return FUnit.Run(args, describe =>
 
             var fibers = Fibers.For(2, 0, 5, 1, factory);
 
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
@@ -96,7 +96,7 @@ return FUnit.Run(args, describe =>
 
             Must.HaveSameSequence(new List<int> { 0, 1, 2, 3, 4 }, results.OrderBy(x => x).ToList());
             Must.BeTrue(fibers.IsCompleted);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsFailed);
         });
 
@@ -122,7 +122,7 @@ return FUnit.Run(args, describe =>
 
             var fibers = Fibers.For(3, 0, 10, 1, factory);
 
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
@@ -133,7 +133,7 @@ return FUnit.Run(args, describe =>
 
             Must.BeTrue(maxConcurrency <= 3);
             Must.BeTrue(fibers.IsCompleted);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsFailed);
         });
 
@@ -150,17 +150,17 @@ return FUnit.Run(args, describe =>
             var fibers = Fibers.For(2, 0, 5, 1, factory);
 
             Must.BeTrue(!fibers.IsCompleted);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsFailed);
 
             _ = fibers.Start(); // Start the fibers in the background
-            Must.BeTrue(fibers.IsStarted);
+            Must.BeTrue(fibers.IsRunning);
 
             await fibers.AsTask(); // Await the completion of all tasks
 
             Must.HaveSameSequence(new List<int> { 0, 1, 2, 3, 4 }, results.OrderBy(x => x).ToList());
             Must.BeTrue(fibers.IsCompleted);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsFailed);
         });
 
@@ -176,12 +176,12 @@ return FUnit.Run(args, describe =>
 
             var fibers = Fibers.For(2, 0, 1, 1, factory);
 
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
             _ = fibers.Start(); // Start the fibers in the background
-            Must.BeTrue(fibers.IsStarted);
+            Must.BeTrue(fibers.IsRunning);
 
             // Attempting to iterate should now throw FiberException
             Must.Throw<FiberException>("Cannot iterate while task is running in background", async () =>
@@ -192,11 +192,11 @@ return FUnit.Run(args, describe =>
                 }
             });
 
-            // After the error, the fibers should be completed and failed
+            // After the error, the fibers should be completed successfully
             await fibers.AsTask();
             Must.BeTrue(fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed); // next() throws but fibers is completed by start()
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
         });
 
         it("should throw FiberException if Start() is called inside await foreach...in", async () =>
@@ -211,7 +211,7 @@ return FUnit.Run(args, describe =>
 
             var fibers = Fibers.For(2, 0, 5, 1, factory);
 
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
@@ -227,11 +227,78 @@ return FUnit.Run(args, describe =>
                 }
             });
 
-            // After the error, the fibers should be completed and failed
+            // After the error, the fibers should be completed successfully
             await fibers.AsTask();
             Must.BeTrue(fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed); // next() throws but fibers is completed by start()
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
+        });
+
+        it("should throw FiberException if Stop() is called in await foreach loop", async () =>
+        {
+            var results = new List<int>();
+            Func<int, Task<int>> factory = async (index) =>
+            {
+                results.Add(index);
+                await Task.Delay(DELAY);
+                return await Task.FromResult(index);
+            };
+
+            var fibers = Fibers.For(1, 0, 5, 1, factory);
+
+            Must.BeTrue(!fibers.IsRunning);
+            Must.BeTrue(!fibers.IsCompleted);
+            Must.BeTrue(!fibers.IsFailed);
+
+            Must.Throw<FiberException>("Attempting to stop fibers running by `await foreach`", async () =>
+            {
+                await foreach (var result in fibers)
+                {
+                    if (result == 0) // Stop on the first iteration
+                    {
+                        await fibers.Stop();
+                    }
+                }
+            });
+
+            // After the error, the fibers should be completed successfully
+            await fibers.AsTask();
+            Must.BeTrue(fibers.IsCompleted);
+            Must.BeTrue(!fibers.IsFailed); // next() throws but fibers is completed by start()
+            Must.BeTrue(!fibers.IsRunning);
+        });
+
+        it("should throw FiberException if Fibers.For is consumed simultaneously", async () =>
+        {
+            Func<int, Task<int>> factory = async (index) =>
+            {
+                await Task.Delay(DELAY);
+                return await Task.FromResult(index);
+            };
+            var fibers = Fibers.For(1, 0, 5, 1, factory);
+
+            using var signal = new ManualResetEventSlim();
+
+            // Start consumption in the background
+            _ = Task.Run(async () =>
+            {
+                await foreach (var result in fibers)
+                {
+                    signal.Set();
+                }
+            });
+
+            signal.Wait();
+
+            Must.Throw<FiberException>("Cannot iterate while other thread is consuming tasks", async () =>
+            {
+                await foreach (var result in fibers)
+                {
+                    // This should throw
+                }
+            });
+
+            await fibers.AsTask(); // Ensure background task completes
         });
     });
 
@@ -250,7 +317,7 @@ return FUnit.Run(args, describe =>
 
             var fibers = Fibers.ForEach(1, items, factory);
 
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
@@ -262,7 +329,7 @@ return FUnit.Run(args, describe =>
 
             Must.HaveSameSequence(new List<string> { "a", "b", "c" }, results.OrderBy(x => x).ToList());
             Must.BeTrue(fibers.IsCompleted);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsFailed);
         });
 
@@ -279,7 +346,7 @@ return FUnit.Run(args, describe =>
 
             var fibers = Fibers.ForEach(1, items, factory);
 
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
@@ -291,7 +358,7 @@ return FUnit.Run(args, describe =>
 
             Must.HaveSameSequence(new List<string>(), results);
             Must.BeTrue(fibers.IsCompleted);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsFailed);
         });
 
@@ -308,18 +375,18 @@ return FUnit.Run(args, describe =>
 
             var fibers = Fibers.ForEach(1, items, factory);
 
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
             _ = fibers.Start();
-            Must.BeTrue(fibers.IsStarted);
+            Must.BeTrue(fibers.IsRunning);
 
             await fibers.AsTask();
 
             Must.HaveSameSequence(new List<string> { "a", "b", "c" }, results.OrderBy(x => x).ToList());
             Must.BeTrue(fibers.IsCompleted);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsFailed);
         });
 
@@ -336,12 +403,12 @@ return FUnit.Run(args, describe =>
 
             var fibers = Fibers.ForEach(1, items, factory);
 
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
             _ = fibers.Start();
-            Must.BeTrue(fibers.IsStarted);
+            Must.BeTrue(fibers.IsRunning);
 
             Must.Throw<FiberException>("Cannot iterate while task is running in background", async () =>
             {
@@ -355,7 +422,7 @@ return FUnit.Run(args, describe =>
             await fibers.AsTask();
             Must.BeTrue(fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
         });
 
         it("should throw FiberException if Start() is called inside await foreach...in (forEach)", async () =>
@@ -371,7 +438,7 @@ return FUnit.Run(args, describe =>
 
             var fibers = Fibers.ForEach(1, items, factory);
 
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
@@ -382,14 +449,82 @@ return FUnit.Run(args, describe =>
                 {
                     processedResults.Add(result);
                     _ = fibers.Start();
-                    Must.BeTrue(fibers.IsStarted);
+                    Must.BeTrue(fibers.IsRunning);
                 }
             });
 
             await fibers.AsTask();
             Must.BeTrue(fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
+        });
+
+        it("should throw FiberException if Stop() is called in await foreach loop (forEach)", async () =>
+        {
+            var results = new List<string>();
+            var items = new List<string> { "a", "b", "c" };
+            Func<string, Task<string>> factory = async (item) =>
+            {
+                results.Add(item);
+                await Task.Delay(DELAY);
+                return await Task.FromResult(item);
+            };
+
+            var fibers = Fibers.ForEach(1, items, factory);
+
+            Must.BeTrue(!fibers.IsRunning);
+            Must.BeTrue(!fibers.IsCompleted);
+            Must.BeTrue(!fibers.IsFailed);
+
+            Must.Throw<FiberException>("Attempting to stop fibers running by `await foreach`", async () =>
+            {
+                await foreach (var result in fibers)
+                {
+                    if (result == "a") // Stop on the first iteration
+                    {
+                        await fibers.Stop();
+                    }
+                }
+            });
+
+            // After the error, the fibers should be completed successfully
+            await fibers.AsTask();
+            Must.BeTrue(fibers.IsCompleted);
+            Must.BeTrue(!fibers.IsFailed); // next() throws but fibers is completed by start()
+            Must.BeTrue(!fibers.IsRunning);
+        });
+
+        it("should throw FiberException if Fibers.ForEach is consumed simultaneously", async () =>
+        {
+            var items = new List<string> { "a", "b", "c" };
+            Func<string, Task<string>> factory = async (item) =>
+            {
+                await Task.Delay(DELAY);
+                return await Task.FromResult(item);
+            };
+            var fibers = Fibers.ForEach(1, items, factory);
+
+            using var signal = new ManualResetEventSlim();
+
+            // Start consumption in the background
+            _ = Task.Run(async () =>
+            {
+                await foreach (var result in fibers)
+                {
+                    signal.Set();
+                }
+            });
+
+            signal.Wait();
+
+            Must.Throw<FiberException>("Cannot iterate while other thread is consuming tasks", async () =>
+            {
+                await foreach (var result in fibers)
+                {
+                    // This should throw
+                }
+            });
+            await fibers.AsTask(); // Ensure background task completes
         });
     });
 
@@ -406,7 +541,7 @@ return FUnit.Run(args, describe =>
             };
             var fibers = Fibers.For(1, 0, 1, 1, factory);
 
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
@@ -415,7 +550,7 @@ return FUnit.Run(args, describe =>
             await fibers.AsTask();
             Must.HaveSameSequence(new List<int> { 0 }, results);
             Must.BeTrue(fibers.IsCompleted);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsFailed);
 
             // Reset results for second attempt
@@ -426,7 +561,7 @@ return FUnit.Run(args, describe =>
             await fibers.AsTask();
             Must.HaveSameSequence(new List<int>(), results); // No new tasks should be processed
             Must.BeTrue(fibers.IsCompleted);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsFailed);
         });
 
@@ -441,7 +576,7 @@ return FUnit.Run(args, describe =>
             };
             var fibers = Fibers.For(1, 0, 1, 1, factory);
 
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
@@ -450,7 +585,7 @@ return FUnit.Run(args, describe =>
             await fibers.AsTask();
             Must.HaveSameSequence(new List<int> { 0 }, results);
             Must.BeTrue(fibers.IsCompleted);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsFailed);
 
             // Reset results for second attempt
@@ -465,7 +600,7 @@ return FUnit.Run(args, describe =>
             Must.HaveSameSequence(new List<int>(), results); // No new tasks should be processed
             Must.HaveSameSequence(new List<int>(), processedResults);
             Must.BeTrue(fibers.IsCompleted);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsFailed);
         });
 
@@ -478,7 +613,7 @@ return FUnit.Run(args, describe =>
             };
             var fibers = Fibers.For(1, 0, 1, 1, factory);
 
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
@@ -487,14 +622,14 @@ return FUnit.Run(args, describe =>
                 // Consume the fiber
             }
             Must.BeTrue(fibers.IsCompleted);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsFailed);
 
             // Calling Start() again should not throw and should not restart
             await fibers.Start();
             await fibers.AsTask();
             Must.BeTrue(fibers.IsCompleted);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsFailed);
         });
 
@@ -509,7 +644,7 @@ return FUnit.Run(args, describe =>
             };
             var fibers = Fibers.For(1, 0, 1, 1, factory);
 
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
@@ -518,7 +653,7 @@ return FUnit.Run(args, describe =>
                 // First iteration
             }
             Must.BeTrue(fibers.IsCompleted);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsFailed);
 
             var secondResults = new List<int>();
@@ -530,7 +665,7 @@ return FUnit.Run(args, describe =>
             Must.HaveSameSequence(new List<int> { 0 }, results); // Only the first iteration should have processed tasks
             Must.HaveSameSequence(new List<int>(), secondResults); // Second iteration should yield nothing
             Must.BeTrue(fibers.IsCompleted);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsFailed);
         });
 
@@ -543,24 +678,24 @@ return FUnit.Run(args, describe =>
             };
             var fibers = Fibers.For(1, 0, 1, 1, factory);
 
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
             _ = fibers.Start();
-            Must.BeTrue(fibers.IsStarted);
+            Must.BeTrue(fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
             // Calling Start() again should not throw and should not change state
             _ = fibers.Start();
-            Must.BeTrue(fibers.IsStarted);
+            Must.BeTrue(fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
             await fibers.AsTask();
             Must.BeTrue(fibers.IsCompleted);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsFailed);
         });
     });
@@ -579,7 +714,7 @@ return FUnit.Run(args, describe =>
             };
             var fibers = Fibers.ForEach(1, items, factory);
 
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
@@ -588,7 +723,7 @@ return FUnit.Run(args, describe =>
             await fibers.AsTask();
             Must.HaveSameSequence(new List<string> { "a" }, results);
             Must.BeTrue(fibers.IsCompleted);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsFailed);
 
             // Reset results for second attempt
@@ -599,7 +734,7 @@ return FUnit.Run(args, describe =>
             await fibers.AsTask();
             Must.HaveSameSequence(new List<string>(), results); // No new tasks should be processed
             Must.BeTrue(fibers.IsCompleted);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsFailed);
         });
 
@@ -615,7 +750,7 @@ return FUnit.Run(args, describe =>
             };
             var fibers = Fibers.ForEach(1, items, factory);
 
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
@@ -624,7 +759,7 @@ return FUnit.Run(args, describe =>
             await fibers.AsTask();
             Must.HaveSameSequence(new List<string> { "a" }, results);
             Must.BeTrue(fibers.IsCompleted);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsFailed);
 
             // Reset results for second attempt
@@ -639,7 +774,7 @@ return FUnit.Run(args, describe =>
             Must.HaveSameSequence(new List<string>(), results); // No new tasks should be processed
             Must.HaveSameSequence(new List<string>(), processedResults);
             Must.BeTrue(fibers.IsCompleted);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsFailed);
         });
 
@@ -653,7 +788,7 @@ return FUnit.Run(args, describe =>
             };
             var fibers = Fibers.ForEach(1, items, factory);
 
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
@@ -662,14 +797,14 @@ return FUnit.Run(args, describe =>
                 // Consume the fiber
             }
             Must.BeTrue(fibers.IsCompleted);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsFailed);
 
             // Calling Start() again should not throw and should not restart
             await fibers.Start();
             await fibers.AsTask();
             Must.BeTrue(fibers.IsCompleted);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsFailed);
         });
 
@@ -685,7 +820,7 @@ return FUnit.Run(args, describe =>
             };
             var fibers = Fibers.ForEach(1, items, factory);
 
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
@@ -694,7 +829,7 @@ return FUnit.Run(args, describe =>
                 // First iteration
             }
             Must.BeTrue(fibers.IsCompleted);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsFailed);
 
             var secondResults = new List<string>();
@@ -706,7 +841,7 @@ return FUnit.Run(args, describe =>
             Must.HaveSameSequence(new List<string> { "a" }, results); // Only the first iteration should have processed tasks
             Must.HaveSameSequence(new List<string>(), secondResults); // Second iteration should yield nothing
             Must.BeTrue(fibers.IsCompleted);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsFailed);
         });
 
@@ -720,24 +855,24 @@ return FUnit.Run(args, describe =>
             };
             var fibers = Fibers.ForEach(1, items, factory);
 
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
             _ = fibers.Start();
-            Must.BeTrue(fibers.IsStarted);
+            Must.BeTrue(fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
             // Calling Start() again should not throw and should not change state
             _ = fibers.Start();
-            Must.BeTrue(fibers.IsStarted);
+            Must.BeTrue(fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
             await fibers.AsTask();
             Must.BeTrue(fibers.IsCompleted);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsFailed);
         });
     });
@@ -760,7 +895,7 @@ return FUnit.Run(args, describe =>
 
             var fibers = Fibers.For(1, 0, 5, 1, factory);
 
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
@@ -781,7 +916,7 @@ return FUnit.Run(args, describe =>
             Must.HaveSameSequence(new List<int> { 0, 1 }, processed);
             Must.BeTrue(fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
         });
 
         it("should skip erroneous tasks when error handler returns \"Skip\"", async () =>
@@ -800,7 +935,7 @@ return FUnit.Run(args, describe =>
 
             var fibers = Fibers.For(1, 0, 5, 1, factory);
 
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
@@ -821,7 +956,7 @@ return FUnit.Run(args, describe =>
             Must.HaveSameSequence(new List<int> { 0, 1, 3, 4 }, processed);
             Must.BeTrue(fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
         });
 
         it("should re-throw error and mark fibers as failed when error handler returns \"Default\"", async () =>
@@ -840,7 +975,7 @@ return FUnit.Run(args, describe =>
 
             var fibers = Fibers.For(1, 0, 5, 1, factory);
 
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
@@ -864,7 +999,7 @@ return FUnit.Run(args, describe =>
             Must.HaveSameSequence(new List<int> { 0, 1 }, processed);
             Must.BeTrue(fibers.IsCompleted); // Fibers should be completed even if failed
             Must.BeTrue(fibers.IsFailed); // Fibers should be marked as failed
-            Must.BeTrue(!fibers.IsStarted); // Should not be started after error
+            Must.BeTrue(!fibers.IsRunning); // Should not be started after error
         });
     });
 
@@ -886,18 +1021,18 @@ return FUnit.Run(args, describe =>
 
             var fibers = Fibers.For(concurrency, 0, arraySize, 1, factory);
 
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
             _ = fibers.Start();
-            Must.BeTrue(fibers.IsStarted);
+            Must.BeTrue(fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
             await fibers.Stop();
             Must.NotHaveSameSequence(expected, results);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
 
@@ -906,7 +1041,7 @@ return FUnit.Run(args, describe =>
 
             Must.HaveSameSequence(expected, results.OrderBy(x => x).ToList());
             Must.BeTrue(fibers.IsCompleted);
-            Must.BeTrue(!fibers.IsStarted);
+            Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsFailed);
         });
     });
