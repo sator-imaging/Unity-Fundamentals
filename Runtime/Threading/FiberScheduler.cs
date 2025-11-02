@@ -62,11 +62,6 @@ namespace SatorImaging.UnityFundamentals
                 State = "<Default>",
             };
 
-            // NOTE: DO NOT delete the DEBUG() call in event.
-            //       --> on startup, event will resume the suspended default scheduler, and then the default
-            //           scheduler will emit a redundant log.
-            //           Without event log, it seems that 2 default schedulers run simultaneously.
-            //       * It's not a good idea to use Task.Run to wait for initialization in the thread pool.
             Priority.OnWillConsume += () =>
             {
                 DEBUG($"{nameof(Priority)} scheduler suspends {nameof(Default)} scheduler");
@@ -209,9 +204,22 @@ namespace SatorImaging.UnityFundamentals
         {
             while (interlock_isRunning != 0 && interlock_runningThreadCount < b_concurrency)
             {
-                if (Interlocked.Increment(ref interlock_runningThreadCount) > b_concurrency ||
-                    !taskQueue.TryDequeue(out var job))
+                if (Interlocked.Increment(ref interlock_runningThreadCount) > b_concurrency)
                 {
+                    Interlocked.Decrement(ref interlock_runningThreadCount);
+                    return;
+                }
+
+                if (!taskQueue.TryDequeue(out var job))
+                {
+                    // NOTE: should see the comments in finally block below to understand event invocation.
+                    if (Interlocked.Exchange(ref interlock_isConsuming, 0) != 0)
+                    {
+                        DEBUG($"Scheduler '{State ?? "NO STATE AVAILABLE"}' has finished task execution");
+
+                        OnDidConsume?.Invoke();
+                    }
+
                     Interlocked.Decrement(ref interlock_runningThreadCount);
                     return;
                 }
@@ -236,20 +244,18 @@ namespace SatorImaging.UnityFundamentals
                     }
                     finally
                     {
-                        if (Interlocked.Decrement(ref self.interlock_runningThreadCount) == 0)
-                        {
-                            if (Interlocked.Exchange(ref self.interlock_isConsuming, 0) != 0)
-                            {
-                                if (self.interlock_runningThreadCount == 0 && self.taskQueue.IsEmpty)
-                                {
-                                    self.OnDidConsume?.Invoke();
+                        // NOTE: when thread starts, it dequeues task from queue.
+                        //       thus checking task count here is not correct moment to determine
+                        //       event should be invoked or not.
 
-                                    DEBUG($"Scheduler '{self.State ?? "NO STATE AVAILABLE"}' has finished task execution");
-                                }
-                            }
-                        }
+                        // so just decrement thread count here.
+                        Interlocked.Decrement(ref self.interlock_runningThreadCount);
 
-                        self.ConsumeNextAvailableTask();  // always retry consuming new task
+                        // and always retry consuming new task.
+                        self.ConsumeNextAvailableTask();
+
+                        // in the next loop, dequeuing task is right moment where determine the event
+                        // should be called or not.
                     }
                 },
                 (this, job.payload, job.factory));
