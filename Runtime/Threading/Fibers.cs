@@ -318,16 +318,27 @@ namespace SatorImaging.UnityFundamentals
         /// <inheritdoc/>
         public override Task Stop()
         {
-            var active = Interlocked.Exchange(ref interlock_activeConsumingTask, null);
-            if (active == ConsumingTasksByForeach)
+            var spinWait = new SpinWait();
+
+            var active = interlock_activeConsumingTask;
+            do
             {
-                // Restore state before throwing because this is an invalid operation.
-                Interlocked.CompareExchange(ref interlock_activeConsumingTask, active, null);
+                if (active == ConsumingTasksByForeach)
+                {
+                    FiberException.Throw("Attempting to stop fibers running by `await foreach`");
+                }
 
-                FiberException.Throw("Attempting to stop fibers running by `await foreach`");
+                var previous = Interlocked.CompareExchange(ref interlock_activeConsumingTask, null, active);
+                if (previous == active)
+                {
+                    return active ?? Task.CompletedTask;
+                }
+
+                active = previous;
+
+                spinWait.SpinOnce();
             }
-
-            return active ?? Task.CompletedTask;
+            while (true);
         }
 
         /// <exception cref="FiberException">Thrown if an attempt is made to start the fiber while it is being iterated over asynchronously.</exception>
