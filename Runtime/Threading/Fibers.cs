@@ -131,20 +131,20 @@ namespace SatorImaging.UnityFundamentals
         public bool IsCompleted => this.taskSource.Task.IsCompleted;
 
         /// <summary>
-        /// Gets a value indicating whether the fiber has started.
+        /// Gets a value indicating whether the fiber is actively processing tasks.
         /// </summary>
-        abstract public bool IsStarted { get; }
+        abstract public bool IsRunning { get; }
 
 
         /*  Fiber Controls  ================================================================ */
 
         /// <summary>
-        /// Stops the execution of the fiber.
+        /// Stops the execution of the fiber and waits for currently running background tasks to complete.
         /// </summary>
         /// <returns>A Task that represents the asynchronous stop operation.</returns>
         abstract public Task Stop();
         /// <summary>
-        /// Starts the execution of the fiber.
+        /// Starts the execution of the fiber. If the fiber is already running, it returns the existing active task.
         /// </summary>
         /// <returns>A Task that represents the asynchronous start operation.</returns>
         abstract public Task Start();
@@ -301,36 +301,47 @@ namespace SatorImaging.UnityFundamentals
 
         /*  Start/Stop  ================================================================ */
 
-        volatile int interlock_isGeneratorConsuming;
-        volatile Task? interlock_activeBackgroundTask;
+        // NOTE: there are 2 ways to consume fibers, `Start()` and `await foreach`.
+        //       to achieve thread-safe state handling easily, use task for both usecase.
+        //       * no matter whether it is completed or not
+        readonly Task ConsumingTasksByForeach = Task.Run(static () => { });  // don't use Task ctor (created task has special internal state)
 
-        /// <summary>
-        /// Gets a value indicating whether the fiber has started and is actively processing tasks.
-        /// </summary>
-        // check both active and fibers task because active task field update may be delayed
-        public override bool IsStarted => interlock_activeBackgroundTask != null && !this.taskSource.Task.IsCompleted;
+        volatile Task? interlock_activeConsumingTask;
 
-        /// <summary>
-        /// Stops the execution of the fiber and waits for currently running background tasks to complete.
-        /// </summary>
-        public override Task Stop() => Interlocked.Exchange(ref interlock_activeBackgroundTask, null) ?? Task.CompletedTask;
-
-        /// <summary>
-        /// Starts the execution of the fiber. If the fiber is already running, it returns the existing active task.
-        /// </summary>
-        /// <exception cref="FiberException">Thrown if an attempt is made to start the fiber while it is being iterated over asynchronously.</exception>
-        public override Task Start()
+        /// <inheritdoc/>
+        public override bool IsRunning
         {
-            if (interlock_isGeneratorConsuming != 0)
+            // field value change may not be visible in all threads immediately so need to check task completion also
+            get => interlock_activeConsumingTask != null && !this.taskSource.Task.IsCompleted;
+        }
+
+        /// <inheritdoc/>
+        public override Task Stop()
+        {
+            var active = Interlocked.Exchange(ref interlock_activeConsumingTask, null);
+            if (active == ConsumingTasksByForeach)
             {
-                FiberException.Throw("Cannot start while iterating over fibers");
+                Interlocked.CompareExchange(ref interlock_activeConsumingTask, active, null);
+                FiberException.Throw("Attempting to stop fibers running by `await foreach`");
             }
 
+            return active ?? Task.CompletedTask;
+        }
+
+        /// <exception cref="FiberException">Thrown if an attempt is made to start the fiber while it is being iterated over asynchronously.</exception>
+        /// <inheritdoc/>
+        public override Task Start()
+        {
             var activeTaskSource = new TaskCompletionSource<TaskResult>();
 
-            var previous = Interlocked.CompareExchange(ref interlock_activeBackgroundTask, activeTaskSource.Task, null);
+            var previous = Interlocked.CompareExchange(ref interlock_activeConsumingTask, activeTaskSource.Task, null);
             if (previous != null)
             {
+                if (previous == ConsumingTasksByForeach)
+                {
+                    FiberException.Throw("Cannot start while iterating over fibers");
+                }
+
                 return previous;  // other thread takes control
             }
 
@@ -346,7 +357,7 @@ namespace SatorImaging.UnityFundamentals
                     {
                     }
                     while (
-                        self.interlock_activeBackgroundTask == activeTask &&
+                        self.interlock_activeConsumingTask == activeTask &&
                         await self.MoveNextAsync()
                     );
                 }
@@ -354,8 +365,7 @@ namespace SatorImaging.UnityFundamentals
                 {
                     activeTaskSource.TrySetResult(NIL);
 
-                    // clear only if active task matches
-                    _ = Interlocked.CompareExchange(ref self.interlock_activeBackgroundTask, null, activeTask);
+                    _ = Interlocked.CompareExchange(ref self.interlock_activeConsumingTask, null, activeTask);
                 }
             }
         }
@@ -378,12 +388,16 @@ namespace SatorImaging.UnityFundamentals
         [EditorBrowsable(EditorBrowsableState.Never)]
         public IAsyncEnumerator<TValue> GetAsyncEnumerator(CancellationToken cancellationToken)
         {
-            if (interlock_activeBackgroundTask != null)
+            var active = Interlocked.CompareExchange(ref interlock_activeConsumingTask, ConsumingTasksByForeach, null);
+            if (active != null)
             {
+                if (active == ConsumingTasksByForeach)
+                {
+                    FiberException.Throw("Cannot iterate while other thread is consuming tasks");
+                }
+
                 FiberException.Throw("Cannot iterate while task is running in background");
             }
-
-            Interlocked.Exchange(ref interlock_isGeneratorConsuming, 1);
 
             return this;
         }
@@ -524,8 +538,7 @@ namespace SatorImaging.UnityFundamentals
 
             this.generator.Dispose();
 
-            interlock_isGeneratorConsuming = 0;
-            interlock_activeBackgroundTask = null;
+            interlock_activeConsumingTask = null;
 
             return default;
         }
