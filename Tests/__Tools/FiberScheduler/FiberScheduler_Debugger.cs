@@ -3,6 +3,7 @@
 
 #if DEBUG
 
+using SatorImaging.UnityFundamentals;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -11,7 +12,7 @@ using Debug = UnityEngine.Debug;
 
 #nullable enable
 
-namespace SatorImaging.UnityFundamentals.Debugger
+namespace Tests.SatorImaging.UnityFundamentals.Tools
 {
     [DebuggerVisualizer(typeof(FiberScheduler_Debugger))]
     public static class FiberScheduler_Debugger

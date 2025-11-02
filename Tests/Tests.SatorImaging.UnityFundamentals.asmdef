@@ -1,5 +1,5 @@
 {
-    "name": "SatorImaging.Tests.UnityFundamentals",
+    "name": "Tests.SatorImaging.UnityFundamentals",
     "rootNamespace": "Tests must be written using FUnit",
     "references": [],
     "includePlatforms": [
