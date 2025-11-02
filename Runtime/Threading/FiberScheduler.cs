@@ -6,9 +6,7 @@
 #endif
 
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -64,11 +62,6 @@ namespace SatorImaging.UnityFundamentals
                 State = "<Default>",
             };
 
-            // NOTE: DO NOT delete the DEBUG() call in event.
-            //       --> on startup, event will resumes slept default scheduler and then default
-            //           scheduler will emit redundant log.
-            //           without event log, it seems that 2 default scheduler runs simultaneously.
-            //       * it's not good idea to use Task.Run to wait initialization in thread pool.
             Priority.OnWillConsume += () =>
             {
                 DEBUG($"{nameof(Priority)} scheduler suspends {nameof(Default)} scheduler");
@@ -84,7 +77,7 @@ namespace SatorImaging.UnityFundamentals
 
         /*  instance  ================================================================ */
 
-        readonly ConcurrentQueue<(Payload state, Func<Payload, Task<Instruction>> factory)> taskQueue = new();
+        readonly ConcurrentQueue<(Payload payload, Func<Payload, ValueTask> factory)> taskQueue = new();
 
         /// <summary>
         /// Create a new instance of the <see cref="FiberScheduler"/> class.
@@ -92,16 +85,16 @@ namespace SatorImaging.UnityFundamentals
         /// <param name="concurrency">The number of tasks to run in parallel.</param>
         public FiberScheduler(int concurrency)
         {
-            this.Concurrency = concurrency;
+            if (concurrency <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(concurrency), $"Argument must be greater than 0: {concurrency}");
+            }
+
+            this.b_concurrency = concurrency;
 
             Resume();
         }
 
-
-        /// <summary>
-        /// Gets or sets the maximum number of tasks to run in parallel.
-        /// </summary>
-        public int Concurrency { get; set; }
 
         /// <summary>
         /// Gets or sets an object that contains data about the scheduler.
@@ -119,17 +112,53 @@ namespace SatorImaging.UnityFundamentals
         public event Action? OnDidConsume;
 
         /// <summary>
+        /// Occurs when an error is encountered during task execution.
+        /// </summary>
+        public event Action<FiberScheduler, Payload, Exception>? ErrorHandler;
+
+
+        volatile int b_concurrency;
+
+        /// <summary>
+        /// Adjusts the concurrency level by the specified delta in a thread-safe manner.
+        /// <para>
+        /// > [!IMPORTANT]
+        /// > Increment exactly same value you've previously decrement or vice versa to
+        /// > restore original state in thread-safe manner.
+        /// > (i.e., you should not calculate delta right before restoring your modification. it's not thread-safe)
+        /// </para>
+        /// </summary>
+        /// <param name="delta">The amount to change the concurrency level by.</param>
+        /// <returns>The new concurrency level.</returns>
+        public int AdjustConcurrencyLevel(int delta)
+        {
+            return Interlocked.Add(ref b_concurrency, delta);
+        }
+
+        /// <summary>
+        /// Gets a reference to the raw concurrency level field.
+        /// <para>
+        /// > [!IMPORTANT]
+        /// > Direct modification is not thread-safe.
+        /// > For thread-safe modifications, use atomic operations or appropriate synchronization mechanisms.
+        /// </para>
+        /// </summary>
+        public ref int UnsafeRawConcurrencyLevel => ref b_concurrency;
+
+
+        /// <summary>
         /// Schedules a new task to be executed by the scheduler.
         /// </summary>
-        /// <param name="state">The payload to be processed by the task.</param>
+        /// <param name="payload">The payload to be processed by the task.</param>
         /// <param name="factory">A function that creates the task to be executed.</param>
-        /// <remarks>
-        ...
-        /// </remarks>
-        public void Schedule(Payload state, Func<Payload, Task<Instruction>> factory)
+        public void Submit(Payload payload, Func<Payload, ValueTask> factory)
         {
-            taskQueue.Enqueue((state, factory));
-            ConsumeNextAvailableTask();
+            taskQueue.Enqueue((payload, factory));
+
+            if (interlock_runningThreadCount == 0)
+            {
+                ConsumeNextAvailableTask();
+            }
         }
 
         /// <summary>
@@ -143,7 +172,7 @@ namespace SatorImaging.UnityFundamentals
         public bool IsRunning => interlock_isRunning != 0;
 
         volatile int interlock_isRunning;
-        volatile int interlock_runningTaskCount;
+        volatile int interlock_runningThreadCount;
         volatile int interlock_isConsuming;
 
         /// <summary>
@@ -153,7 +182,7 @@ namespace SatorImaging.UnityFundamentals
         public int Suspend()
         {
             Interlocked.Exchange(ref interlock_isRunning, 0);
-            return RemainingTaskCount;
+            return taskQueue.Count;
         }
 
         /// <summary>
@@ -165,6 +194,7 @@ namespace SatorImaging.UnityFundamentals
             {
                 return;
             }
+
             ConsumeNextAvailableTask();
         }
 
@@ -172,17 +202,25 @@ namespace SatorImaging.UnityFundamentals
 
         void ConsumeNextAvailableTask()
         {
-            while (interlock_isRunning != 0 && interlock_runningTaskCount < Concurrency)
+            while (interlock_isRunning != 0 && interlock_runningThreadCount < b_concurrency)
             {
-                if (Interlocked.Increment(ref interlock_runningTaskCount) > Concurrency)
+                if (Interlocked.Increment(ref interlock_runningThreadCount) > b_concurrency)
                 {
-                    Interlocked.Decrement(ref interlock_runningTaskCount);
+                    Interlocked.Decrement(ref interlock_runningThreadCount);
                     return;
                 }
 
                 if (!taskQueue.TryDequeue(out var job))
                 {
-                    Interlocked.Decrement(ref interlock_runningTaskCount);
+                    // NOTE: should see the comments in finally block below to understand event invocation.
+                    if (Interlocked.Exchange(ref interlock_isConsuming, 0) != 0)
+                    {
+                        DEBUG($"Scheduler '{State ?? "NO STATE AVAILABLE"}' has finished task execution");
+
+                        OnDidConsume?.Invoke();
+                    }
+
+                    Interlocked.Decrement(ref interlock_runningThreadCount);
                     return;
                 }
 
@@ -193,42 +231,39 @@ namespace SatorImaging.UnityFundamentals
 
                 ThreadPool.UnsafeQueueUserWorkItem(static async (obj) =>
                 {
-                    var (self, state, factory) = ((FiberScheduler, Payload, Func<Payload, Task<Instruction>>))obj;
+                    var (self, payload, factory) = ((FiberScheduler, Payload, Func<Payload, ValueTask>))obj;
                     try
                     {
-                        var instruction = await factory(state);
-                        switch (instruction)
-                        {
-                            case Instruction.Suspend:
-                                self.Suspend();
-                                return;
-                            case Instruction.None:
-                            default:
-                                break;
-                        }
+                        await factory.Invoke(payload);
                     }
-                    catch (Exception e)
+                    catch (Exception error)
                     {
-                        DEBUG(e);
+                        DEBUG(error);
+
+                        self.ErrorHandler?.Invoke(self, payload, error);
                     }
                     finally
                     {
-                        if (Interlocked.Decrement(ref self.interlock_runningTaskCount) == 0)
-                        {
-                            if (Interlocked.Exchange(ref self.interlock_isConsuming, 0) != 0)
-                            {
-                                if (self.interlock_runningTaskCount == 0 && self.RemainingTaskCount == 0)
-                                    self.OnDidConsume?.Invoke();
-                            }
-                        }
+                        // NOTE: when thread starts, it dequeues task from queue.
+                        //       thus checking task count here is not correct moment to determine
+                        //       event should be invoked or not.
+
+                        // so just decrement thread count here.
+                        Interlocked.Decrement(ref self.interlock_runningThreadCount);
+
+                        // and always retry consuming new task.
                         self.ConsumeNextAvailableTask();
+
+                        // in the next loop, dequeuing task is right moment where determine the event
+                        // should be called or not.
                     }
-                }, (this, job.state, job.factory));
+                },
+                (this, job.payload, job.factory));
             }
         }
 
 
-        /*  impl  ================================================================ */
+        /*  payload  ================================================================ */
 
         /// <summary>
         /// A payload for the task.
@@ -267,20 +302,5 @@ namespace SatorImaging.UnityFundamentals
             public static bool operator ==(Payload left, Payload right) => left.Equals(right);
             public static bool operator !=(Payload left, Payload right) => !(left == right);
         }
-
-
-        /// <summary>
-        /// An instruction for the scheduler.
-        /// </summary>
-        public enum Instruction
-        {
-            /// <summary>Do nothing.</summary>
-            None,
-
-            /// <summary>Suspend scheduler immediately.</summary>
-            Suspend,
-        }
-
-
     }
 }

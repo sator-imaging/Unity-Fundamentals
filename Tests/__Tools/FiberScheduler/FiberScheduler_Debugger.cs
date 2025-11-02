@@ -20,17 +20,17 @@ namespace Tests.SatorImaging.UnityFundamentals.Tools
         const string DEFAULT = "Default Scheduler";
         const string PRIORITY = "Priority Scheduler";
 
-        [Category(DEFAULT)] public static void Concurrency1() => Debug.Log($"Concurrency: {FiberScheduler.Default.Concurrency = 1}");
-        [Category(DEFAULT)] public static void ConcurrencyIncrement() => Debug.Log($"Concurrency: {++FiberScheduler.Default.Concurrency}");
-        [Category(DEFAULT)] public static void ConcurrencyDecrement() => Debug.Log($"Concurrency: {--FiberScheduler.Default.Concurrency}");
+        [Category(DEFAULT)] public static void Concurrency1() => Debug.Log($"Concurrency: {FiberScheduler.Default.UnsafeRawConcurrencyLevel = 1}");
+        [Category(DEFAULT)] public static void ConcurrencyIncrement() => Debug.Log($"Concurrency: {FiberScheduler.Default.AdjustConcurrencyLevel(+1)}");
+        [Category(DEFAULT)] public static void ConcurrencyDecrement() => Debug.Log($"Concurrency: {FiberScheduler.Default.AdjustConcurrencyLevel(-1)}");
         [Category(DEFAULT)] public static void Resume() => FiberScheduler.Default.Resume();
         [Category(DEFAULT)] public static void Suspend() => Debug.Log($"Suspended (remaining tasks: {FiberScheduler.Default.Suspend()})");
         [Category(DEFAULT)] public static void Submit3Tasks() => SubmitTasks(3, FiberScheduler.Default);
         [Category(DEFAULT)] public static void Submit10Tasks() => SubmitTasks(10, FiberScheduler.Default);
 
-        [Category(PRIORITY)] public static void Concurrency1_() => Debug.Log($"Concurrency: {FiberScheduler.Priority.Concurrency = 1}");
-        [Category(PRIORITY)] public static void ConcurrencyIncrement_() => Debug.Log($"Concurrency: {++FiberScheduler.Priority.Concurrency}");
-        [Category(PRIORITY)] public static void ConcurrencyDecrement_() => Debug.Log($"Concurrency: {--FiberScheduler.Priority.Concurrency}");
+        [Category(PRIORITY)] public static void Concurrency1_() => Debug.Log($"Concurrency: {FiberScheduler.Priority.UnsafeRawConcurrencyLevel = 1}");
+        [Category(PRIORITY)] public static void ConcurrencyIncrement_() => Debug.Log($"Concurrency: {FiberScheduler.Priority.AdjustConcurrencyLevel(+1)}");
+        [Category(PRIORITY)] public static void ConcurrencyDecrement_() => Debug.Log($"Concurrency: {FiberScheduler.Priority.AdjustConcurrencyLevel(-1)}");
         [Category(PRIORITY)] public static void Resume_() => FiberScheduler.Priority.Resume();
         [Category(PRIORITY)] public static void Suspend_() => Debug.Log($"Suspended (remaining tasks: {FiberScheduler.Priority.Suspend()})");
         [Category(PRIORITY)] public static void Submit3Tasks_() => SubmitTasks(3, FiberScheduler.Priority);
@@ -47,13 +47,11 @@ namespace Tests.SatorImaging.UnityFundamentals.Tools
             {
                 var number = ++TaskNo;
 
-                scheduler.Schedule(new(0, null), async payload =>
+                scheduler.Submit(new(0, null), async payload =>
                 {
                     Debug.Log($"{color}#{number} Starting (thread: {Environment.CurrentManagedThreadId})</color>");
                     await Task.Delay(DELAY);
                     Debug.Log($"{color}#{number} Complete (thread: {Environment.CurrentManagedThreadId}; remaining tasks: {scheduler.RemainingTaskCount})</color>");
-
-                    return FiberScheduler.Instruction.None;
                 });
             }
         }
