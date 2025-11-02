@@ -541,8 +541,7 @@ namespace SatorImaging.UnityFundamentals
             this.generator.Dispose();
 
             // Should consider Fibers may be started by whether Start() or await foreach.
-            Interlocked.CompareExchange(ref interlock_activeConsumingTask, null, ConsumingTasksByForeach);
-            Interlocked.CompareExchange(ref interlock_activeConsumingTask, null, interlock_activeConsumingTask);
+            Interlocked.Exchange(ref interlock_activeConsumingTask, null);
 
             return default;
         }
