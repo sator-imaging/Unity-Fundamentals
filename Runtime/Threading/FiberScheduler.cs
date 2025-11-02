@@ -57,7 +57,6 @@ namespace SatorImaging.UnityFundamentals
             Priority = new(processorCount)
             {
                 State = "<Priority>",
-                AutoRetryOnError = true,
             };
 
             Default = new(processorCount)
@@ -118,12 +117,6 @@ namespace SatorImaging.UnityFundamentals
         /// Occurs after all tasks in the queue have been consumed.
         /// </summary>
         public event Action? OnDidConsume;
-
-        /// <summary>
-        /// Gets or sets a value indicating whether to automatically retry a task when an exception is thrown.
-        /// </summary>
-        public bool AutoRetryOnError { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; set; }
-
 
         /// <summary>
         /// Schedules a new task to be executed by the scheduler.
@@ -217,10 +210,6 @@ namespace SatorImaging.UnityFundamentals
                     catch (Exception e)
                     {
                         DEBUG(e);
-                        if (self.AutoRetryOnError)
-                        {
-                            self.Schedule(state, factory);
-                        }
                     }
                     finally
                     {
