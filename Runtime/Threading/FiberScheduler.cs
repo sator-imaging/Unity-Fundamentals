@@ -143,7 +143,7 @@ namespace SatorImaging.UnityFundamentals
         /// > For thread-safe modifications, use atomic operations or appropriate synchronization mechanisms.
         /// </para>
         /// </summary>
-        public ref int RawConcurrencyLevel => ref b_concurrency;
+        public ref int UnsafeRawConcurrencyLevel => ref b_concurrency;
 
 
         /// <summary>
