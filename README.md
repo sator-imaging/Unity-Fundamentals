@@ -29,7 +29,7 @@ https://github.com/sator-imaging/Unity-Fundamentals.git#v1.3.1
 ```
 https://github.com/sator-imaging/Unity-Fundamentals.git
 ```
-<sup>&nbsp; very experimental, may have breaking changes without notice.</sup>
+<sup>&nbsp; very experimental, may have breaking changes or compile errors without notice.</sup>
 
 
 
