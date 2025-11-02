@@ -21,17 +21,12 @@ using System.Threading.Tasks;
 
 namespace SatorImaging.UnityFundamentals
 {
-    // TODO: There is no reason to depend on the underlying Fibers instance.
-    //       simply, scheduler can hold the concurrent queue directly for the consuming thread.
-    //       - when new task is scheduled, call ConsumeTasks() to try starting consuming threads
-    //         until reaches to concurrency level.
-    //       - when the consuming thread completes executing task, then decrease consuming thread
-    //         count and try consuming new task if there are remaining tasks.
-    //         (use while or label jump to avoid recursive method call)
-
     /// <summary>
-    /// A scheduler for running tasks in fibers.
+    /// Provides a mechanism to schedule and manage the execution of tasks with a specified degree of concurrency.
     /// </summary>
+    /// <remarks>
+    /// This scheduler is designed to run tasks in a controlled manner, allowing for suspension, resumption, and parallel execution of tasks.
+    /// </remarks>
     public class FiberScheduler
     {
         [Conditional("__logging")]
@@ -90,8 +85,7 @@ namespace SatorImaging.UnityFundamentals
 
         /*  instance  ================================================================ */
 
-        readonly Generator generator;
-        readonly Fibers<Payload, Instruction> fibers;
+        readonly ConcurrentQueue<(Payload state, Func<Payload, Task<Instruction>> factory)> taskQueue = new();
 
         /// <summary>
         /// Create a new instance of the <see cref="FiberScheduler"/> class.
@@ -99,216 +93,148 @@ namespace SatorImaging.UnityFundamentals
         /// <param name="concurrency">The number of tasks to run in parallel.</param>
         public FiberScheduler(int concurrency)
         {
-            this.generator = new();
-            this.fibers = new Fibers<Payload, Instruction>(concurrency, generator);
+            this.Concurrency = concurrency;
 
             Resume();
         }
 
 
         /// <summary>
-        /// The number of tasks to run in parallel.
+        /// Gets or sets the maximum number of tasks to run in parallel.
         /// </summary>
-        public int Concurrency
-        {
-            get => fibers.Concurrency;
-            set => fibers.Concurrency = value;
-        }
+        public int Concurrency { get; set; }
 
         /// <summary>
-        /// An object that contains data about the scheduler.
+        /// Gets or sets an object that contains data about the scheduler.
         /// </summary>
-        public object? State
-        {
-            get => fibers.State;
-            set => fibers.State = value;
-        }
+        public object? State { get; set; }
 
 
         /// <summary>
-        /// Invoked before consuming a task.
+        /// Occurs before the scheduler begins consuming a task.
         /// </summary>
         public event Action? OnWillConsume;
         /// <summary>
-        /// Invoked after all tasks are consumed.
+        /// Occurs after all tasks in the queue have been consumed.
         /// </summary>
         public event Action? OnDidConsume;
 
         /// <summary>
-        /// Automatically retry when an exception is thrown.
+        /// Gets or sets a value indicating whether to automatically retry a task when an exception is thrown.
         /// </summary>
         public bool AutoRetryOnError { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; set; }
 
 
         /// <summary>
-        /// Schedules a new task to be executed.
+        /// Schedules a new task to be executed by the scheduler.
         /// </summary>
-        /// <param name="state">The payload for the task.</param>
-        /// <param name="factory">The function that creates the task.</param>
+        /// <param name="state">The payload to be processed by the task.</param>
+        /// <param name="factory">A function that creates the task to be executed.</param>
         /// <remarks>
-        /// > [!NOTE]
-        /// > This method will not resume a suspended scheduler. Call <see cref="Resume()"/> explicitly if needed.
+        ...
         /// </remarks>
         public void Schedule(Payload state, Func<Payload, Task<Instruction>> factory)
         {
-            generator.Schedule(state, factory);
-
-            ResumeConsumingThread();
+            taskQueue.Enqueue((state, factory));
+            ConsumeNextAvailableTask();
         }
 
+        /// <summary>
+        /// Gets the number of tasks remaining in the queue.
+        /// </summary>
+        public int RemainingTaskCount => taskQueue.Count;
 
         /// <summary>
-        /// The number of tasks remaining in the queue.
-        /// </summary>
-        public int RemainingTaskCount => generator.RemainingTaskCount;
-        /// <summary>
-        /// Whether the scheduler is running.
+        /// Gets a value indicating whether the scheduler is currently running.
         /// </summary>
         public bool IsRunning => interlock_isRunning != 0;
 
         volatile int interlock_isRunning;
-        volatile int interlock_isThreadAlive;
-        volatile TaskCompletionSource<bool>? interlock_stopper;
+        volatile int interlock_runningTaskCount;
+        volatile int interlock_isConsuming;
 
         /// <summary>
-        /// Suspend the scheduler.
+        /// Suspends the execution of the scheduler.
         /// </summary>
-        /// <returns>The number of remaining tasks.</returns>
+        /// <returns>The number of tasks remaining in the queue when the scheduler was suspended.</returns>
         public int Suspend()
         {
             Interlocked.Exchange(ref interlock_isRunning, 0);
-
-            ResumeConsumingThread();  // free up thread
-
             return RemainingTaskCount;
         }
 
         /// <summary>
-        /// Resume the scheduler.
+        /// Resumes the execution of a suspended scheduler.
         /// </summary>
         public void Resume()
         {
-            // always restart thread
-            ResumeConsumingThread();
-
             if (Interlocked.Exchange(ref interlock_isRunning, 1) != 0)
             {
                 return;
             }
-
-            CreateConsumingThread();
+            ConsumeNextAvailableTask();
         }
-
 
         /* =====  consuming thread  ===== */
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void ResumeConsumingThread()
+        void ConsumeNextAvailableTask()
         {
-            var stopper = Interlocked.Exchange(ref interlock_stopper, null);
-            stopper?.SetResult(true);
-        }
-
-
-        void CreateConsumingThread()
-        {
-            ThreadPool.UnsafeQueueUserWorkItem(static async (obj) =>
+            while (interlock_isRunning != 0 && interlock_runningTaskCount < Concurrency)
             {
-                const string NO_STATE = "NO STATE AVAILABLE";
-
-                var self = (FiberScheduler)obj;
-                var fibers = self.fibers;
-
-                bool invoked_onDidConsume = true;  // true, not false
-                Exception? error = null;
-
-                if (Interlocked.Exchange(ref self.interlock_isThreadAlive, 1) != 0)
+                if (Interlocked.Increment(ref interlock_runningTaskCount) > Concurrency)
                 {
-                    // other thread runs
+                    Interlocked.Decrement(ref interlock_runningTaskCount);
                     return;
                 }
 
-                try
+                if (!taskQueue.TryDequeue(out var job))
                 {
-                RESTART:
-                    // always check before consuming/restarting
-                    if (self.interlock_isRunning == 0)
-                    {
-                        return;
-                    }
+                    Interlocked.Decrement(ref interlock_runningTaskCount);
+                    return;
+                }
 
-                    self.OnWillConsume?.Invoke();
-                    invoked_onDidConsume = false;  // set after onWill event
+                if (Interlocked.Exchange(ref interlock_isConsuming, 1) == 0)
+                {
+                    OnWillConsume?.Invoke();
+                }
+
+                ThreadPool.UnsafeQueueUserWorkItem(static async (obj) =>
+                {
+                    var (self, state, factory) = ((FiberScheduler, Payload, Func<Payload, Task<Instruction>>))obj;
+                    try
                     {
-                        await foreach (var instruction in fibers)
+                        var instruction = await factory(state);
+                        switch (instruction)
                         {
-                            switch (instruction)
-                            {
-                                case Instruction.Suspend:
-                                    self.Suspend();
-                                    return;
-
-                                case Instruction.None:
-                                default:
-                                    break;
-                            }
-
-                            if (self.interlock_isRunning == 0)
-                            {
+                            case Instruction.Suspend:
+                                self.Suspend();
                                 return;
-                            }
+                            case Instruction.None:
+                            default:
+                                break;
                         }
                     }
-                    invoked_onDidConsume = true;  // set before onDid event (event may fail; avoid double execution in finally block)
-                    self.OnDidConsume?.Invoke();
-
-                    var stopper = new TaskCompletionSource<bool>();
-                    if (Interlocked.CompareExchange(ref self.interlock_stopper, stopper, comparand: null) != null)
+                    catch (Exception e)
                     {
-                        throw new Exception("must not be reached");
-                    }
-
-                    DEBUG($"{nameof(FiberScheduler)} '{self.State ?? NO_STATE}' is waiting for new task... (thread: {Environment.CurrentManagedThreadId})");
-
-                    await stopper.Task;
-                    goto RESTART;
-                }
-                catch (Exception e)
-                {
-                    error = e;
-
-                    if (self.AutoRetryOnError)
-                    {
-                        // need a delay to have finally block executed before auto retry
-                        _ = Task.Run(async () =>
+                        DEBUG(e);
+                        if (self.AutoRetryOnError)
                         {
-                            await Task.Delay(1000);
-                            self.CreateConsumingThread();
-                        });
-
-                        return;
+                            self.Schedule(state, factory);
+                        }
                     }
-
-                    throw;
-                }
-                finally
-                {
-                    Interlocked.Exchange(ref self.interlock_isThreadAlive, 0);
-
-                    if (!invoked_onDidConsume)
+                    finally
                     {
-                        self.OnDidConsume?.Invoke();
+                        if (Interlocked.Decrement(ref self.interlock_runningTaskCount) == 0 && self.RemainingTaskCount == 0)
+                        {
+                            if (Interlocked.Exchange(ref self.interlock_isConsuming, 0) != 0)
+                            {
+                                self.OnDidConsume?.Invoke();
+                            }
+                        }
+                        self.ConsumeNextAvailableTask();
                     }
-
-                    if (error == null || !self.AutoRetryOnError)
-                    {
-                        self.Suspend();  // set necessary internal states
-                    }
-
-                    DEBUG($"{nameof(FiberScheduler)} '{self.State ?? NO_STATE}' is exiting consuming thread...");
-                }
-            },
-            this);
+                }, (this, job.state, job.factory));
+            }
         }
 
 
@@ -366,44 +292,5 @@ namespace SatorImaging.UnityFundamentals
         }
 
 
-        sealed class Generator
-            : IEnumerator<(Payload, Func<Payload, Task<Instruction>>)>
-        {
-            readonly ConcurrentQueue<(Payload state, Func<Payload, Task<Instruction>> factory)> queue = new();
-
-            public (Payload, Func<Payload, Task<Instruction>>) Current { get; private set; }
-            object IEnumerator.Current => this.Current;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Dispose() { }  // DO NOT clear queue here! this method is invoked when exiting foreach loop!!
-            public void Reset() { }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool MoveNext()
-            {
-                if (queue.TryDequeue(out var job))
-                {
-                    Current = job;
-                }
-                else
-                {
-                    // ok exiting consuming thread loop
-                    return false;
-                }
-
-                return true;
-            }
-
-
-            /*  internal  ================================================================ */
-
-            internal int RemainingTaskCount => queue.Count;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal void Schedule(Payload state, Func<Payload, Task<Instruction>> factory)
-            {
-                queue.Enqueue((state, factory));
-            }
-        }
     }
 }
