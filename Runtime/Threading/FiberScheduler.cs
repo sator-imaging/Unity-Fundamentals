@@ -82,7 +82,7 @@ namespace SatorImaging.UnityFundamentals
 
         /*  instance  ================================================================ */
 
-        readonly ConcurrentQueue<(Payload state, Func<Payload, Task> factory)> taskQueue = new();
+        readonly ConcurrentQueue<(Payload payload, Func<Payload, ValueTask> factory)> taskQueue = new();
 
         /// <summary>
         /// Create a new instance of the <see cref="FiberScheduler"/> class.
@@ -115,6 +115,11 @@ namespace SatorImaging.UnityFundamentals
         /// Occurs after all tasks in the queue have been consumed.
         /// </summary>
         public event Action? OnDidConsume;
+
+        /// <summary>
+        /// Occurs when an error is encountered during task execution.
+        /// </summary>
+        public event Action<FiberScheduler, Payload, Exception>? ErrorHandler;
 
 
         volatile int b_concurrency;
@@ -149,11 +154,11 @@ namespace SatorImaging.UnityFundamentals
         /// <summary>
         /// Schedules a new task to be executed by the scheduler.
         /// </summary>
-        /// <param name="state">The payload to be processed by the task.</param>
+        /// <param name="payload">The payload to be processed by the task.</param>
         /// <param name="factory">A function that creates the task to be executed.</param>
-        public void Submit(Payload state, Func<Payload, Task> factory)
+        public void Submit(Payload payload, Func<Payload, ValueTask> factory)
         {
-            taskQueue.Enqueue((state, factory));
+            taskQueue.Enqueue((payload, factory));
 
             if (interlock_runningTaskCount == 0)
             {
@@ -218,10 +223,16 @@ namespace SatorImaging.UnityFundamentals
 
                 ThreadPool.UnsafeQueueUserWorkItem(static async (obj) =>
                 {
-                    var (self, state, factory) = ((FiberScheduler, Payload, Func<Payload, Task>))obj;
+                    var (self, payload, factory) = ((FiberScheduler, Payload, Func<Payload, ValueTask>))obj;
                     try
                     {
-                        await factory(state);
+                        await factory.Invoke(payload);
+                    }
+                    catch (Exception error)
+                    {
+                        DEBUG(error);
+
+                        self.ErrorHandler?.Invoke(self, payload, error);
                     }
                     finally
                     {
@@ -241,7 +252,7 @@ namespace SatorImaging.UnityFundamentals
                         self.ConsumeNextAvailableTask();  // always retry consuming new task
                     }
                 },
-                (this, job.state, job.factory));
+                (this, job.payload, job.factory));
             }
         }
 
