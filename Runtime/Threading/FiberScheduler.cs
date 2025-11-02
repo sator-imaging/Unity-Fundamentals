@@ -160,7 +160,7 @@ namespace SatorImaging.UnityFundamentals
         {
             taskQueue.Enqueue((payload, factory));
 
-            if (interlock_runningTaskCount == 0)
+            if (interlock_runningThreadCount == 0)
             {
                 ConsumeNextAvailableTask();
             }
@@ -177,7 +177,7 @@ namespace SatorImaging.UnityFundamentals
         public bool IsRunning => interlock_isRunning != 0;
 
         volatile int interlock_isRunning;
-        volatile int interlock_runningTaskCount;
+        volatile int interlock_runningThreadCount;
         volatile int interlock_isConsuming;
 
         /// <summary>
@@ -207,12 +207,12 @@ namespace SatorImaging.UnityFundamentals
 
         void ConsumeNextAvailableTask()
         {
-            while (interlock_isRunning != 0 && interlock_runningTaskCount < b_concurrency)
+            while (interlock_isRunning != 0 && interlock_runningThreadCount < b_concurrency)
             {
-                if (Interlocked.Increment(ref interlock_runningTaskCount) > b_concurrency ||
+                if (Interlocked.Increment(ref interlock_runningThreadCount) > b_concurrency ||
                     !taskQueue.TryDequeue(out var job))
                 {
-                    Interlocked.Decrement(ref interlock_runningTaskCount);
+                    Interlocked.Decrement(ref interlock_runningThreadCount);
                     return;
                 }
 
@@ -236,11 +236,11 @@ namespace SatorImaging.UnityFundamentals
                     }
                     finally
                     {
-                        if (Interlocked.Decrement(ref self.interlock_runningTaskCount) == 0)
+                        if (Interlocked.Decrement(ref self.interlock_runningThreadCount) == 0)
                         {
                             if (Interlocked.Exchange(ref self.interlock_isConsuming, 0) != 0)
                             {
-                                if (self.interlock_runningTaskCount == 0 && self.taskQueue.IsEmpty)
+                                if (self.interlock_runningThreadCount == 0 && self.taskQueue.IsEmpty)
                                 {
                                     self.OnDidConsume?.Invoke();
 
