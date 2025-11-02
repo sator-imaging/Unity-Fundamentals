@@ -1,0 +1,19 @@
+{
+    "name": "Tests.SatorImaging.UnityFundamentals.Tools",
+    "rootNamespace": "Tests.SatorImaging.UnityFundamentals.Tools",
+    "references": [
+        "SatorImaging.UnityFundamentals",
+        "SatorImaging.UnityFundamentals.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
