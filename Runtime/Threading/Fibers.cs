@@ -318,6 +318,8 @@ namespace SatorImaging.UnityFundamentals
         /// <inheritdoc/>
         public override Task Stop()
         {
+            var spinWait = new SpinWait();
+
             var active = interlock_activeConsumingTask;
             do
             {
@@ -333,6 +335,8 @@ namespace SatorImaging.UnityFundamentals
                 }
 
                 active = previous;
+
+                spinWait.SpinOnce();
             }
             while (true);
         }
