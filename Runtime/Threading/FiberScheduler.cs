@@ -224,11 +224,12 @@ namespace SatorImaging.UnityFundamentals
                     }
                     finally
                     {
-                        if (Interlocked.Decrement(ref self.interlock_runningTaskCount) == 0 && self.RemainingTaskCount == 0)
+                        if (Interlocked.Decrement(ref self.interlock_runningTaskCount) == 0)
                         {
                             if (Interlocked.Exchange(ref self.interlock_isConsuming, 0) != 0)
                             {
-                                self.OnDidConsume?.Invoke();
+                                if (self.interlock_runningTaskCount == 0 && self.RemainingTaskCount == 0)
+                                    self.OnDidConsume?.Invoke();
                             }
                         }
                         self.ConsumeNextAvailableTask();
