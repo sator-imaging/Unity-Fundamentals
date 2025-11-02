@@ -321,7 +321,9 @@ namespace SatorImaging.UnityFundamentals
             var active = Interlocked.Exchange(ref interlock_activeConsumingTask, null);
             if (active == ConsumingTasksByForeach)
             {
+                // Restore state before throwing because this is an invalid operation.
                 Interlocked.CompareExchange(ref interlock_activeConsumingTask, active, null);
+
                 FiberException.Throw("Attempting to stop fibers running by `await foreach`");
             }
 
@@ -538,7 +540,9 @@ namespace SatorImaging.UnityFundamentals
 
             this.generator.Dispose();
 
-            interlock_activeConsumingTask = null;
+            // Should consider Fibers may be started by whether Start() or await foreach.
+            Interlocked.CompareExchange(ref interlock_activeConsumingTask, null, ConsumingTasksByForeach);
+            Interlocked.CompareExchange(ref interlock_activeConsumingTask, null, interlock_activeConsumingTask);
 
             return default;
         }
