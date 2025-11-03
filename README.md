@@ -34,12 +34,13 @@ https://github.com/sator-imaging/Unity-Fundamentals.git#v1.3.1
 
 
 ### Canary/Nightly Build
-```
-https://github.com/sator-imaging/Unity-Fundamentals.git
-```
 
 > [!IMPORTANT]
 > It's very experimental and may have breaking changes or compile errors without notice.
+
+```
+https://github.com/sator-imaging/Unity-Fundamentals.git
+```
 
 
 
