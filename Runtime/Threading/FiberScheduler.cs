@@ -140,6 +140,8 @@ namespace SatorImaging.UnityFundamentals
                 ConsumeAvailableTasks();
             }
 
+            // ok to return current value
+            // returning the value right after addition or current don't matter
             return b_concurrency;
         }
 
