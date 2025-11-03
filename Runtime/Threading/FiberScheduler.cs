@@ -114,25 +114,38 @@ namespace SatorImaging.UnityFundamentals
         /// <summary>
         /// Occurs when an error is encountered during task execution.
         /// </summary>
-        public event Action<FiberScheduler, Payload, Exception>? ErrorHandler;
+        public event Action<Exception, FiberScheduler, Payload>? ErrorHandler;
 
 
         volatile int b_concurrency;
 
         /// <summary>
         /// Adjusts the concurrency level by the specified delta in a thread-safe manner.
-        /// <para>
+        /// </summary>
+        /// <remarks>
         /// > [!IMPORTANT]
         /// > Increment exactly same value you've previously decrement or vice versa to
         /// > restore original state in thread-safe manner.
         /// > (i.e., you should not calculate delta right before restoring your modification. it's not thread-safe)
-        /// </para>
-        /// </summary>
+        /// </remarks>
         /// <param name="delta">The amount to change the concurrency level by.</param>
-        /// <returns>The new concurrency level.</returns>
+        /// <returns>
+        /// The new concurrency level.
+        /// Note that the value is just for reference because it may be immediately modified by another thread.
+        /// </returns>
         public int AdjustConcurrencyLevel(int delta)
         {
-            return Interlocked.Add(ref b_concurrency, delta);
+            Interlocked.Add(ref b_concurrency, delta);
+
+            if (delta >= 0 &&  // include 0 to provide ability to force consume without change
+                interlock_isRunning != 0)
+            {
+                ConsumeAvailableTasks();
+            }
+
+            // ok to return current value
+            // returning the value right after addition or current don't matter
+            return b_concurrency;
         }
 
         /// <summary>
@@ -155,11 +168,14 @@ namespace SatorImaging.UnityFundamentals
         {
             taskQueue.Enqueue((payload, factory));
 
-            if (interlock_runningThreadCount == 0)
+            // start thread immediately because existing threads never consume new tasks
+            // until complete current execution
+            if (interlock_isRunning != 0)
             {
-                ConsumeNextAvailableTask();
+                ConsumeAvailableTasks();
             }
         }
+
 
         /// <summary>
         /// Gets the number of tasks remaining in the queue.
@@ -195,14 +211,18 @@ namespace SatorImaging.UnityFundamentals
                 return;
             }
 
-            ConsumeNextAvailableTask();
+            ConsumeAvailableTasks();
         }
+
 
         /* =====  consuming thread  ===== */
 
-        void ConsumeNextAvailableTask()
+        void ConsumeAvailableTasks()
         {
-            while (interlock_isRunning != 0 && interlock_runningThreadCount < b_concurrency)
+            while (
+                b_concurrency > 0 &&  // concurrency level accepts zero or negative for thread-safety
+                interlock_isRunning != 0
+            )
             {
                 if (Interlocked.Increment(ref interlock_runningThreadCount) > b_concurrency)
                 {
@@ -210,9 +230,9 @@ namespace SatorImaging.UnityFundamentals
                     return;
                 }
 
+                // NOTE: see the comments in finally block below to understand event invocation strategy.
                 if (!taskQueue.TryDequeue(out var job))
                 {
-                    // NOTE: should see the comments in finally block below to understand event invocation.
                     if (Interlocked.Exchange(ref interlock_isConsuming, 0) != 0)
                     {
                         DEBUG($"Scheduler '{State ?? "NO STATE AVAILABLE"}' has finished task execution");
@@ -240,7 +260,7 @@ namespace SatorImaging.UnityFundamentals
                     {
                         DEBUG(error);
 
-                        self.ErrorHandler?.Invoke(self, payload, error);
+                        self.ErrorHandler?.Invoke(error, self, payload);
                     }
                     finally
                     {
@@ -252,7 +272,7 @@ namespace SatorImaging.UnityFundamentals
                         Interlocked.Decrement(ref self.interlock_runningThreadCount);
 
                         // and always retry consuming new task.
-                        self.ConsumeNextAvailableTask();
+                        self.ConsumeAvailableTasks();
 
                         // in the next loop, dequeuing task is right moment where determine the event
                         // should be called or not.
