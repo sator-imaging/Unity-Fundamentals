@@ -20,16 +20,26 @@ Add the following `git URL` in Unity Package Manager (UPM)
 
 
 ## Release version
+
+Use latest stable release
+```
+https://github.com/sator-imaging/Unity-Fundamentals.git#latest
+```
+
+or use specific version (append desired version at the end: `#vX.Y.Z`)
+
 ```
 https://github.com/sator-imaging/Unity-Fundamentals.git#v1.3.1
 ```
-<sup>&nbsp; Append desired version at the end. (`#vX.Y.Z`)</sup>
 
-### Latest version
+
+### Canary/Nightly Build
 ```
 https://github.com/sator-imaging/Unity-Fundamentals.git
 ```
-<sup>&nbsp; very experimental, may have breaking changes or compile errors without notice.</sup>
+
+> [!IMPORTANT]
+> It's very experimental and may have breaking changes or compile errors without notice.
 
 
 
