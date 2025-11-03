@@ -43,6 +43,11 @@ Microthreading Library for .NET / Unity
 or [日本語版](https://zenn.dev/sator_imaging/articles/0236e98fbbbc98)
 
 
+### FiberScheduler
+Task scheduler with concurrency level control
+[📘](https://sator-imaging.github.io/Unity-Fundamentals/api/SatorImaging.UnityFundamentals.FiberScheduler.html)
+
+
 ### Non-Alloc String Splitter
 Split string without allocation.
 [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/Text/NonAllocStringSplitter.cs.html)
@@ -149,15 +154,6 @@ or [日本語版](https://qiita.com/sator_imaging/items/2a387a54a01e91e5d71d)
 ### `Sentinel`
 Fast & efficient exclusive or concurrent thread/event manager.
 [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/Threading/Sentinel.cs.html)
-
-
-### `Run`
-Job runner for Unity providing reliable un-async-ing functions and more.
-
-> [!NOTE]
-> `InitializeMainThreadContext` may be required to being called on Unity startup. (it called automatically by default)
-
-**TODO**: documentation for `OnMainThread`, `InThreadPool`, `SetExceptionHandler`, `GetTimerToken`, `GetElapsedTime`, `Shutdown`, `CreateNewScheduler`, `SetConcurrentThreadCount`
 
 
 ### `NetworkClock`
@@ -273,6 +269,15 @@ As IL2CPP bloats resulting C++ code if C# class is not marked with `sealed` modi
 Obsolete features still exist as `.txt` files.
 [📘](https://sator-imaging.github.io/Unity-Fundamentals/Obsolete/LifecycleBehaviour/README.html)
 or [日本語版](https://qiita.com/sator_imaging/items/48296a686e4bbff8676c)
+
+
+### `Run`
+Job runner for Unity providing reliable un-async-ing functions and more.
+
+> [!NOTE]
+> `InitializeMainThreadContext` may be required to being called on Unity startup. (it called automatically by default)
+
+**TODO**: documentation for `OnMainThread`, `InThreadPool`, `SetExceptionHandler`, `GetTimerToken`, `GetElapsedTime`, `Shutdown`, `CreateNewScheduler`, `SetConcurrentThreadCount`
 
 
 
