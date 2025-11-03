@@ -121,15 +121,18 @@ namespace SatorImaging.UnityFundamentals
 
         /// <summary>
         /// Adjusts the concurrency level by the specified delta in a thread-safe manner.
-        /// <para>
+        /// </summary>
+        /// <remarks>
         /// > [!IMPORTANT]
         /// > Increment exactly same value you've previously decrement or vice versa to
         /// > restore original state in thread-safe manner.
         /// > (i.e., you should not calculate delta right before restoring your modification. it's not thread-safe)
-        /// </para>
-        /// </summary>
+        /// </remarks>
         /// <param name="delta">The amount to change the concurrency level by.</param>
-        /// <returns>The new concurrency level.</returns>
+        /// <returns>
+        /// The new concurrency level.
+        /// Note that the value is just for reference because it may be immediately modified by another thread.
+        /// </returns>
         public int AdjustConcurrencyLevel(int delta)
         {
             Interlocked.Add(ref b_concurrency, delta);
