@@ -67,25 +67,14 @@ namespace SatorImaging.UnityFundamentals
     /// </summary>
     abstract public class Fibers
     {
-        /// <summary>
-        /// Represents a null or default task result.
-        /// </summary>
-        protected const TaskResult NIL = 0;
-
         // use byte for 8 booleans placeholder.
-        /// <summary>
-        /// The default task result value.
-        /// </summary>
+        protected const TaskResult NIL = 0;
         protected const TaskResult Result_Default = 0;
-        /// <summary>
-        /// A task result value indicating that this code path should not be reached.
-        /// </summary>
         protected const TaskResult Result_MustNotBeReached = byte.MaxValue;
 
         /// <summary>
         /// A non-thread-safe list to keep track of currently running tasks.
         /// </summary>
-        // DO NOT USE ARRAY FOR TASK TRACKING
         protected readonly List<Task> needLock_runningTasks = new(capacity: 8);
         protected readonly object sync_runningTasks = new();
 
