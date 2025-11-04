@@ -42,6 +42,9 @@ namespace SatorImaging.UnityFundamentals
         /// </summary>
         public static FiberScheduler Default { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; }
 
+        /// <summary>
+        /// The priority scheduler that temporarily suspends default scheduler and executes tasks.
+        /// </summary>
         /// <remarks>
         /// > [!TIP]
         /// > Did you deeply consider running priority task by using <see cref="Task.Run(Action)"/> or <c>await</c>?
@@ -114,7 +117,7 @@ namespace SatorImaging.UnityFundamentals
         /// <summary>
         /// Occurs when an error is encountered during task execution.
         /// </summary>
-        public event Action<Exception, FiberScheduler, Payload>? ErrorHandler;
+        public event Action<Exception, FiberScheduler, Payload, Func<Payload, ValueTask>>? ErrorHandler;
 
 
         volatile int b_concurrency;
@@ -164,16 +167,29 @@ namespace SatorImaging.UnityFundamentals
         /// </summary>
         /// <param name="payload">The payload to be processed by the task.</param>
         /// <param name="factory">A function that creates the task to be executed.</param>
-        public void Submit(Payload payload, Func<Payload, ValueTask> factory)
+        /// <param name="batchSubmission">
+        /// A boolean indicating whether the submission is part of a batch.
+        /// If <c>true</c>, the task will be enqueued but *may* not immediately consumed.
+        /// Call <see cref="CompleteBatchSubmission"/> to ensure consuming tasks submitted in a batch.
+        /// </param>
+        public void Submit(Payload payload, Func<Payload, ValueTask> factory, bool batchSubmission = false)
         {
             taskQueue.Enqueue((payload, factory));
 
             // start thread immediately because existing threads never consume new tasks
             // until complete current execution
-            if (interlock_isRunning != 0)
+            if (!batchSubmission && interlock_isRunning != 0)
             {
                 ConsumeAvailableTasks();
             }
+        }
+
+        /// <summary>
+        /// Completes a batch submission and starts consuming the submitted tasks.
+        /// </summary>
+        public void CompleteBatchSubmission()
+        {
+            ConsumeAvailableTasks();
         }
 
 
@@ -260,7 +276,7 @@ namespace SatorImaging.UnityFundamentals
                     {
                         DEBUG(error);
 
-                        self.ErrorHandler?.Invoke(error, self, payload);
+                        self.ErrorHandler?.Invoke(error, self, payload, factory);
                     }
                     finally
                     {
