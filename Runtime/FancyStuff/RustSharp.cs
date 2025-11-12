@@ -95,11 +95,16 @@ namespace SatorImaging.UnityFundamentals
         public static implicit operator Borrow<T>(AbsoluteOwnership<T> self) => new(self._value);
 
         // IEquatable
-        readonly public override int GetHashCode() => this._value.GetHashCode();
-        readonly public override bool Equals(object? obj) => obj is AbsoluteOwnership<T> ownership && this.Equals(ownership);
+        readonly public override int GetHashCode() => this._value?.GetHashCode() ?? 0;  // may be null!!
+        readonly public override bool Equals(object? obj) => obj is AbsoluteOwnership<T> other && this.Equals(other);
         readonly public bool Equals(AbsoluteOwnership<T> other)
         {
-            return other._value == _value;
+            // NOTE: in semantics, Equals checks those hold SAME REFERENCE or not.
+            //       so this method should return FALSE when both self and other hold null.
+            //       * it's really confusing if returns TRUE when both hold null.
+            //         --> why those own ownership of SAME reference!? (actually not, both are null)
+            return (this._value != null && other._value != null)
+                && ReferenceEquals(this._value, other._value);
         }
         public static bool operator ==(AbsoluteOwnership<T> left, AbsoluteOwnership<T> right) => left.Equals(right);
         public static bool operator !=(AbsoluteOwnership<T> left, AbsoluteOwnership<T> right) => !(left == right);
