@@ -1,4 +1,4 @@
-name: FUnit tests
+name: 
 
 on:
   push:
@@ -26,4 +26,4 @@ jobs:
 
     - name: Tests
       run: |
-        dnx -y FUnit.Run -c ${{ matrix.configuration }} -- -md >> $GITHUB_STEP_SUMMARY
+        dnx -y FUnit.Run -- -c ${{ matrix.configuration }} -md >> $GITHUB_STEP_SUMMARY
