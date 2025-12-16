@@ -74,14 +74,20 @@ namespace SatorImaging.UnityFundamentals
         private T _value;
         public AbsoluteOwnership(T value) => _value = value;
 
+        public void Dispose()
+        {
+            var temp = _value;
+            _value = (((default)))!;
+
+            (temp as IDisposable)?.Dispose();
+        }
+
         public T Move()
         {
             var ret = _value;
             _value = (((default)))!;
             return ret;
         }
-
-        public void Dispose() => _value = (((default)))!;
 
         public void Take(AbsoluteOwnership<T> other) => _value = other.Move();
 
