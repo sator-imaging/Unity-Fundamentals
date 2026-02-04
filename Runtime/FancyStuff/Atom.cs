@@ -20,19 +20,18 @@ atom.WriteLock((x: 42, y: "Tuple"), (args, current) =>
 });
 ```
 
-If `T` is reference type, the object properties can be
-modified in read lock context.
+If `T` is reference type, the object properties can be modified in read lock context.
 
 ```cs
 var atom = new Atom<MyClass>(value: new());
 
-atom.ReadLock(async obj =>
+atom.ReadLock(foo, async (foo, myClass) =>
 {
     // NOTE: Lock is taken until the operation finished.
     //       (e.g., For a second, other thread cannot access to the atom value at all)
     await Task.Delay(1000);
 
-    obj.Value = 310;
+    myClass.Data = foo.Value;
 });
 ```
 
@@ -112,11 +111,12 @@ namespace SatorImaging.UnityFundamentals
             }
         }
 
-        public void ReadLock(Action<T> op)
+        /// <typeparam name="TArgs">Single value or tuple.</typeparam>
+        public void ReadLock<TArgs>(TArgs args, Action<TArgs, T> op)
         {
             lock (sync)
             {
-                op.Invoke(this.value);
+                op.Invoke(args, this.value);
             }
         }
     }
