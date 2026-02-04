@@ -14,7 +14,7 @@ atom.Update = v => ++v;  // Increments (311)
 atom.Set = 42;
 atom.Read = v => Console.WriteLine(v);  // Prints 42
 
-atom.WriteLock((x: 42, y: "Tuple"), (args, current) =>
+atom.WriteLock((x: 42, y: "Tuple"), static (args, current) =>
 {
     return current + args.x + args.y.Length;
 });
@@ -25,7 +25,7 @@ If `T` is reference type, the object properties can be modified in read lock con
 ```cs
 var atom = new Atom<MyClass>(value: new());
 
-atom.ReadLock(foo, async (foo, myClass) =>
+atom.ReadLock(foo, async static (foo, myClass) =>
 {
     // NOTE: Lock is taken until the operation finished.
     //       (e.g., For a second, other thread cannot access to the atom value at all)
