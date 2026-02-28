@@ -4,6 +4,9 @@
 **/bin/
 **/obj/
 
+Benchmarks
+Benchmarks.meta
+
 **/BenchmarkDotNet.Artifacts/
 **/Photoshop/
 

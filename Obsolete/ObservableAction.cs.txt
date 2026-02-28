@@ -4,11 +4,30 @@
 
 BASIC USAGE
 ===========
+It is useful to transform old school event to `IObservable<T>` in ***client side***.
+
+```cs
+foo.OnChanged
+   .AsObservable(add => foo.OnChanged += add, del => foo.OnChanged -= del)
+   .Subscribe(...)
+   .AddTo(disposables);         // add to IDisposable collection
+   .BindTo(cancellationToken);  // or, bind to cancellation token to unsub automatically
+```
+
+
+Deprecated Usage
+----------------
+You can provide `IObservable<T>` interface to clients.
+
+> [!NOTE]
+> Use `ObservableEvent<T>` is recommended. `ObservableAction<T>` is only useful when
+> transforming event to `IObservable<T>` in client side.
+
 ```cs
 // ObservableAction<int> is 24 bytes struct. recommend cast to interface once on instantiate.
 private event Action<int>? Ev_MyEvent;
 IObservableAction<int>? cache_MyEvent;
-public IObservableAction<int> MyEvent => cache_MyEvent ??= new ObservableAction<T>(
+public IObservableAction<int> MyEvent => cache_MyEvent ??= new ObservableAction<int>(
     cb => Ev_MyEvent += cb,
     cb => Ev_MyEvent -= cb);
 
@@ -19,20 +38,11 @@ MyEvent.Subscribe(val => Debug.Log(val))  // register callback like Rx (reactive
 MyEvent.Unsubscribe(existingAction);  // unsubscribe without disposable interface.
 ```
 
-For parameter-less action events, `VoidObservableAction` can be used for.
-Of course you can use `ObservableAction<object?>` or something instead.
-
-```cs
-event Action<VoidObservableAction>? Ev_voidEvent;
-public ObservableAction<VoidObservableAction> VoidEvent => new(x => Ev_voidEvent += x, x => Ev_voidEvent -= x);
-
-Ev_voidEvent?.Invoke(VoidObservableAction.Default);  // use default to invoke event.
-```
-
  */
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -45,44 +55,64 @@ namespace SatorImaging.UnityFundamentals
     // int is most used primitive. use it to eliminate unnecessary type variant generation by IL2CPP.
     public enum VoidObservableAction /*: byte*/ { Default }
 
+    public interface IObservableAction : IObservable<VoidObservableAction>, IDisposable
+    {
+        // concrete type is large (24bytes) and it is always boxed into interface or object so return as interface at this time
+        IObservableAction Subscribe(Action act, bool disallowDuplicate = true);
+        void Unsubscribe(Action act);
+    }
+
+    public interface IObservableAction<T> : IObservable<T>, IDisposable
+    {
+        // concrete type is large (24bytes) and it is always boxed into interface or object so return as interface at this time
+        IObservableAction<T> Subscribe(Action<T> act, bool disallowDuplicate = true);
+        void Unsubscribe(Action<T> act);
+    }
+
+
     public static class ObservableActionExtensions
     {
+        // NOTE: IObservableAction is still useful to transform event to IObservable<T> in ***client side***.
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static IObservableAction Create(Action<Action> sub, Action<Action> unsub) => new ObservableAction(sub, unsub);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static IObservableAction<T> Create<T>(Action<Action<T>> sub, Action<Action<T>> unsub) => new ObservableAction<T>(sub, unsub);
+
+        // helper extension to omit generic type arg
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static IObservableAction AsObservable(this Action _, Action<Action> sub, Action<Action> unsub) => new ObservableAction(sub, unsub);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static IObservableAction<T> AsObservable<T>(this Action<T> _, Action<Action<T>> sub, Action<Action<T>> unsub) => new ObservableAction<T>(sub, unsub);
+
+
         /* =====  ICollection  ===== */
 
-        /// <inheritdoc cref="AddTo{T}(IObservableAction{T}, ICollection{IDisposable})"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void AddTo<T>(this in ObservableAction<T> self, ICollection<IDisposable> collection)
-        {
-            collection.Add(self);
-        }
+        public static void AddTo(this IObservableAction self, ICollection<IDisposable> collection) => collection.Add(self);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void AddTo<T>(this IObservableAction<T> self, ICollection<IDisposable> collection)
-        {
-            collection.Add(self);
-        }
+        public static void AddTo<T>(this IObservableAction<T> self, ICollection<IDisposable> collection) => collection.Add(self);
 
 
         /* =====  CancellationToken  ===== */
 
-        /// <inheritdoc cref="BindTo{T}(IObservableAction{T}, CancellationToken, bool)"/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static CancellationTokenRegistration BindTo<T>(this in ObservableAction<T> self,
-                                                              CancellationToken cancellationToken,
-                                                              bool useSynchronizationContext = false)
-        {
-            return DisposeIfCanceled(self, cancellationToken, useSynchronizationContext);
-        }
-
         /// <summary>Unsubscribe if token is canceled.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static CancellationTokenRegistration BindTo(this IObservableAction self,
+                                                           CancellationToken cancellationToken,
+                                                           bool useSynchronizationContext = false) => DisposeIfCanceled(self, cancellationToken, useSynchronizationContext);
+
+        /// <inheritdoc cref="BindTo(IObservableAction, CancellationToken, bool)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static CancellationTokenRegistration BindTo<T>(this IObservableAction<T> self,
                                                               CancellationToken cancellationToken,
-                                                              bool useSynchronizationContext = false)
-        {
-            return DisposeIfCanceled(self, cancellationToken, useSynchronizationContext);
-        }
+                                                              bool useSynchronizationContext = false) => DisposeIfCanceled(self, cancellationToken, useSynchronizationContext);
 
+
+        /* =====  internal helpers  ===== */
 
         readonly static Action<object> InvokeDisposableDispose = static (obj) =>
         {
@@ -124,13 +154,10 @@ namespace SatorImaging.UnityFundamentals
     }
 
 
-    public interface IObservableAction<T> : IObservable<T>, IDisposable
-    {
-        IObservableAction<T> Subscribe(Action<T> act, bool disallowDuplicate = true);
-        void Unsubscribe(Action<T> act);
-    }
+    /*  ObservableAction<T>  ================================================================ */
 
-
+    [Obsolete("It is not recommended to reference concrete type. Use `IObservableAction<T>` instead.")]
+    [EditorBrowsable(EditorBrowsableState.Never)]
     [StructLayout(LayoutKind.Auto)]
     public readonly struct ObservableAction<T> : IObservableAction<T>, IEquatable<ObservableAction<T>>
     {
@@ -152,7 +179,7 @@ namespace SatorImaging.UnityFundamentals
         /// </code>
         /// </summary>
         /// <param name="disallowDuplicate"><see langword="true"/> to try unsubscribe before subscribe to avoid duplicate registration.</param>
-        private ObservableAction(Action<Action<T>> sub, Action<Action<T>> unsub, Action<T>? callback, bool disallowDuplicate)
+        ObservableAction(Action<Action<T>> sub, Action<Action<T>> unsub, Action<T>? callback, bool disallowDuplicate)
         {
             this.sub = sub ?? throw new NullReferenceException(nameof(sub));
             this.unsub = unsub ?? throw new NullReferenceException(nameof(unsub));
@@ -169,6 +196,7 @@ namespace SatorImaging.UnityFundamentals
             sub.Invoke(callback);
         }
 
+
         public void Dispose()
         {
             if (callback == null)
@@ -178,16 +206,16 @@ namespace SatorImaging.UnityFundamentals
         }
 
 
-        /* =====  IEquatable  ===== */
+        /* =====  IEquatable for Dictionary/HashSet  ===== */
 
-        public override int GetHashCode() => HashCode.Combine(this.sub, this.unsub, this.callback);
         public override bool Equals(object? obj) => obj is ObservableAction<T> other && this.Equals(other);
+        public override int GetHashCode() => HashCode.Combine(this.sub, this.unsub, this.callback);
         public bool Equals(ObservableAction<T> other)
         {
-            return EqualityComparer<Action<T>>.Default.Equals((((this.callback!))), (((other.callback!))))
-                && EqualityComparer<Action<Action<T>>>.Default.Equals(this.unsub, other.unsub)
-                && EqualityComparer<Action<Action<T>>>.Default.Equals(this.sub, other.sub)
-                   ;
+            return EqualityComparer<Action<T>?>.Default.Equals(other.callback, callback)
+                && EqualityComparer<Action<Action<T>>>.Default.Equals(other.unsub, unsub)
+                && EqualityComparer<Action<Action<T>>>.Default.Equals(other.sub, sub)
+                ;
         }
 
         public static bool operator ==(in ObservableAction<T> left, in ObservableAction<T> right) => left.Equals(right);
@@ -196,31 +224,96 @@ namespace SatorImaging.UnityFundamentals
 
         /* =====  sub/unsub  ===== */
 
+        public void Unsubscribe(Action<T> act) => unsub.Invoke(act);
+
         IDisposable IObservable<T>.Subscribe(IObserver<T> observer)
         {
             return new ObservableAction<T>(sub, unsub, observer.OnNext, false);
         }
 
-
-        /// <inheritdoc cref="Subscribe(Action{T}, bool)"/>
-        IObservableAction<T> IObservableAction<T>.Subscribe(Action<T> act, bool disallowDuplicate)
+        /// <returns><see cref="IDisposable"/></returns>
+        public IObservableAction<T> Subscribe(Action<T> act, bool disallowDuplicate = true)
         {
             return new ObservableAction<T>(sub, unsub, act, disallowDuplicate);
+        }
+    }
+
+
+    /*  ObservableAction (no type arg)  ================================================================ */
+
+    [Obsolete("It is not recommended to reference concrete type. Use `IObservableAction` instead.")]
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    [StructLayout(LayoutKind.Auto)]
+    public readonly struct ObservableAction : IObservableAction, IEquatable<ObservableAction>
+    {
+        // NOTE: update Equals() and GetHashCode() when changed!!
+        readonly Action<Action> sub;
+        readonly Action<Action> unsub;
+        readonly Action? callback;
+
+        /// <inheritdoc cref="ObservableAction{T}(Action{Action{T}}, Action{Action{T}}, Action{T}, bool)"/>
+        public ObservableAction(Action<Action> sub, Action<Action> unsub) : this(sub, unsub, null, false) { }
+
+        /// <inheritdoc cref="ObservableAction{T}(Action{Action{T}}, Action{Action{T}}, Action{T}, bool)"/>
+        ObservableAction(Action<Action> sub, Action<Action> unsub, Action? callback, bool disallowDuplicate)
+        {
+            this.sub = sub ?? throw new NullReferenceException(nameof(sub));
+            this.unsub = unsub ?? throw new NullReferenceException(nameof(unsub));
+            this.callback = callback;
+
+            if (callback == null)
+                return;
+
+            if (disallowDuplicate)
+            {
+                unsub.Invoke(callback);
+            }
+
+            sub.Invoke(callback);
+        }
+
+
+        public void Dispose()
+        {
+            if (callback == null)
+                return;
+
+            unsub.Invoke(callback);
+        }
+
+
+        /* =====  IEquatable for Dictionary/HashSet  ===== */
+
+        public override bool Equals(object? obj) => obj is ObservableAction other && this.Equals(other);
+        public override int GetHashCode() => HashCode.Combine(this.sub, this.unsub, this.callback);
+        public bool Equals(ObservableAction other)
+        {
+            return EqualityComparer<Action?>.Default.Equals(other.callback, callback)
+                && EqualityComparer<Action<Action>>.Default.Equals(other.unsub, unsub)
+                && EqualityComparer<Action<Action>>.Default.Equals(other.sub, sub)
+                ;
+        }
+
+        public static bool operator ==(in ObservableAction left, in ObservableAction right) => left.Equals(right);
+        public static bool operator !=(in ObservableAction left, in ObservableAction right) => !(left == right);
+
+
+        /* =====  sub/unsub  ===== */
+
+        public void Unsubscribe(Action act) => unsub.Invoke(act);
+
+        IDisposable IObservable<VoidObservableAction>.Subscribe(IObserver<VoidObservableAction> observer)
+        {
+            return new ObservableAction(sub, unsub, () => observer.OnNext(VoidObservableAction.Default), false);
         }
 
         /// <returns><see cref="IDisposable"/></returns>
-        public ObservableAction<T> Subscribe(Action<T> act, bool disallowDuplicate = true)
+        public IObservableAction Subscribe(Action act, bool disallowDuplicate = true)
         {
-            return new ObservableAction<T>(sub, unsub, act, disallowDuplicate);
+            return new ObservableAction(sub, unsub, act, disallowDuplicate);
         }
-
-
-        public void Unsubscribe(Action<T> act)
-        {
-            unsub.Invoke(act);
-        }
-
     }
+
 }
 
 
@@ -244,11 +337,11 @@ namespace SatorImaging.UnityFundamentals.DEBUG.Observable_Action  // must be uni
 
         static class TestServer
         {
-            static Action<VoidObservableAction>? b_basicEvent;
+            public static Action? b_noParamEvent;
             static Action<int>? b_intEvent;
             static int _executeCount = 0;
 
-            public static ObservableAction<VoidObservableAction> BasicEvent => new(x => b_basicEvent += x, x => b_basicEvent -= x);
+            public static ObservableAction NoParamEvent => new(x => b_noParamEvent += x, x => b_noParamEvent -= x);
             public static ObservableAction<int> IntEvent => new(x => b_intEvent += x, x => b_intEvent -= x);
 
             public static readonly List<IDisposable> SubscriptionList = new();
@@ -261,18 +354,18 @@ namespace SatorImaging.UnityFundamentals.DEBUG.Observable_Action  // must be uni
 
                 _tokenSource ??= new();
 
-                Task.Run(async () =>
+                _ = Task.Run(async () =>
                 {
                     while (!_tokenSource.Token.IsCancellationRequested)
                     {
-                        if (b_basicEvent == null)
+                        if (b_noParamEvent == null)
                         {
-                            UnityEngine.Debug.Log("BasicAction is not set");
+                            UnityEngine.Debug.Log("NoParamAction is not set");
                         }
                         else
                         {
-                            UnityEngine.Debug.Log("BasicAction callback count: " + b_basicEvent.GetInvocationList().Length);
-                            b_basicEvent.Invoke(VoidObservableAction.Default);
+                            UnityEngine.Debug.Log("NoParamAction callback count: " + b_noParamEvent.GetInvocationList().Length);
+                            b_noParamEvent.Invoke();
                         }
 
                         if (b_intEvent == null)
@@ -324,11 +417,11 @@ namespace SatorImaging.UnityFundamentals.DEBUG.Observable_Action  // must be uni
 
         static void RegisterCallbacks(bool disallowDuplicate)
         {
-            TestServer.BasicEvent.Subscribe((_) => UnityEngine.Debug.Log("\t Permanent Action"), disallowDuplicate)
+            TestServer.NoParamEvent.Subscribe(() => UnityEngine.Debug.Log("\t Permanent Action"), disallowDuplicate)
                 .AddTo(TestServer.SubscriptionList);
 
             var cts = new CancellationTokenSource(3100);
-            TestServer.BasicEvent.Subscribe((_) => UnityEngine.Debug.Log("\t Unsubscribed after 3 seconds"), disallowDuplicate)
+            TestServer.NoParamEvent.Subscribe(() => UnityEngine.Debug.Log("\t Unsubscribed after 3 seconds"), disallowDuplicate)
                 .BindTo(cts.Token);
 
             TestServer.IntEvent.Subscribe((val) => UnityEngine.Debug.Log("\t Permanent Action: " + val), disallowDuplicate)
