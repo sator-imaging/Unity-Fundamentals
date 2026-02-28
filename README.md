@@ -1,5 +1,3 @@
-# 🧱 Unity Scripting Fundamentals
-
 [![DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/sator-imaging/Unity-Fundamentals)
 [![🇯🇵](https://img.shields.io/badge/API-Reference-blue)](https://sator-imaging.github.io/Unity-Fundamentals/api/index.html)
 &nbsp;
@@ -11,23 +9,23 @@
 -->
 
 
-Fundamental scripting library for Unity designed to be minimal, efficient & dependency-free as possible.
-Most of scripts are C# / .NET compliant. See `using` statements in `.cs` files for details.
+Unity Scripting Fundamentals is designed to be minimal, efficient & dependency-free as possible.
+Most of scripts are .NET / Plain C# compliant. See `using` statements in `.cs` files for details.
 
-- [Plain C# APIs](#plain-c-apis)
-- [Unity Runtime APIs](#unity-runtime-apis)
-- [Unity Editor Extensions](#unity-editor-scripts)
+- 🧱 [Plain C# APIs](#-plain-c-apis)
+- 🎮 [Unity Runtime APIs](#-unity-runtime-apis)
+- 🖱️ [Unity Editor Extensions](#️-unity-editor-scripts)
 
 > [!TIP]
 > Licensed under the MIT License unless otherwise described.  
 > Supported Unity version: Unity 2021.3+  
 
 
-## 📦 Installation
+# 📦 Installation
 
 Add the following `git URL` in Unity Package Manager (UPM).
 
-![](https://docs.unity3d.com/2020.3/Documentation/uploads/Main/PackageManagerUI-GitURLPackageButton.png)
+![UPM](https://docs.unity3d.com/2020.3/Documentation/uploads/Main/PackageManagerUI-GitURLPackageButton.png)
 
 
 ## 🏷️ Release version
@@ -45,10 +43,10 @@ https://github.com/sator-imaging/Unity-Fundamentals.git#v1.3.1
 ```
 
 
-### 🦜 Canary/Nightly Build
+## 🦜 Canary/Nightly Build
 
 > [!IMPORTANT]
-> It's very experimental and may have breaking changes or compile errors without notice.
+> It's very experimental and may have breaking changes, bug or errors without notice.
 
 ```
 https://github.com/sator-imaging/Unity-Fundamentals.git
@@ -60,7 +58,7 @@ https://github.com/sator-imaging/Unity-Fundamentals.git
 
 &nbsp;
 
-# 🌱 Plain C# APIs
+# 🧱 Plain C# APIs
 
 - `Fibers`  
 Microthreading Library for .NET / Unity.
@@ -81,7 +79,7 @@ or
 [日本語版](https://qiita.com/sator_imaging/items/1393aa0efa3b064d77ec)
 
 
-- Rx (Reactive Extensions) / Observable  
+- **Rx (Reactive Extensions) / Observable**  
 Transform `event Action<T>` to `IObservable<T>`.
 [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/Reactive/ObservableEvent.cs.html)
 
@@ -116,6 +114,7 @@ or
 
 - `HalfUlid`  
 https://github.com/sator-imaging/Half-Ulid
+&nbsp;
 [実装の詳細](https://qiita.com/sator_imaging/items/576781d95367d5856624)
 
 
@@ -166,7 +165,7 @@ or
 [技術的な解説](https://qiita.com/sator_imaging/items/edc5be1a55dd867e1c73)
 
     *NOTE*: Depending on `StrictEnum`
-    **TODO**: Benchmark
+    *TODO*: Benchmark
 
 
 - `Poolable<T>`  
@@ -175,7 +174,7 @@ Self-contained singly linked list based object pool.
 or
 [日本語版](https://qiita.com/sator_imaging/items/2a387a54a01e91e5d71d)
 
-    **TODO**: Write tests
+    *TODO*: Write tests
 
 
 - `Sentinel`  
@@ -224,12 +223,12 @@ No need to use this anymore as unity asset store now accepts `package.json`.
 
 # 🎮 Unity Runtime APIs
 
-- Observable `UnityEvent`  
+- **Observable `UnityEvent`**  
 Transform `UnityEvent` to `IObservable<T>`.
 [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/Reactive/ObservableUnityEvent.cs.html)
 
 
-- Nullable support for `UnityEngine.Object`  
+- **Nullable support for `UnityEngine.Object`**  
 Reliable nullable (`??` `?.` ~~`??=`~~) support for `UnityEngine.Object`.
 [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/UnityObject/NullableUnityObject.cs.html)
 
@@ -249,7 +248,7 @@ or
 [日本語版](https://qiita.com/sator_imaging/items/80c712ee4fcabfce9163)
 
 
-- UI Toolkit Core Extensions
+- **UI Toolkit Core Extensions**
     - `ExecuteAfter` extension method
         - unlike builtin `ExecuteLater` method, this method runs action right after specified number of *repaint* events.
     - `DisableStyleTransitionScope` extension method
@@ -279,16 +278,16 @@ or
 
 # 🖱️ Unity Editor Scripts
 
-- UPM Package Test Kit  
+- **UPM Package Test Kit**  
 Generate clean environment and build script for selected UPM package.
 [📘](Editor/UpmPackage)
 or
 [日本語マニュアル](https://zenn.dev/sator_imaging/articles/feadbd5b1281d8)
 
-    **TODO**: Unit test automation.
+    *TODO*: Unit test automation.
 
 
-- C# API Documentation for IDE  
+- **C# API Documentation for IDE**  
 Download C# API Documentation from Nuget.org.
 [📘](Editor/Nuget)
 
@@ -302,14 +301,14 @@ or
 [日本語版](https://qiita.com/sator_imaging/items/f1bdf82016117cd6c7bd)
 
 
-- Leaked Managed Shell Detector  
+- **Leaked Managed Shell Detector**  
 Not perfect.
 Just for reference.
 [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Editor/Uncategorized/LeakedManagedShellDetector.cs.html)
 
 
-- Assembly Definitions Manager for Project Settings Panel  
-**TODO**: Documentation
+- **Assembly Definitions Manager** for Project Settings Panel  
+*TODO*: Documentation
 
 
 - *WIP*: `sealed`-able Type Finder  
@@ -326,7 +325,7 @@ As IL2CPP bloats resulting C++ code if C# class is not marked with `sealed` modi
 Files are found in [Obsolete/](./Obsolete/) folder with `.txt` extension.
 
 
-- CancellationToken based Lifecycle Manager for Unity Editor  
+- **CancellationToken based Lifecycle Manager**  
 Obsolete features still exist as `.txt` files.
 [📘](https://sator-imaging.github.io/Unity-Fundamentals/Obsolete/LifecycleBehaviour/README.html)
 or
