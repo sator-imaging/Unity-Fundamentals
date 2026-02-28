@@ -338,7 +338,7 @@ Job runner for Unity providing reliable un-async-ing functions and more.
     > [!NOTE]
     > `InitializeMainThreadContext` may be required to being called on Unity startup. (it called automatically by default)
 
-    **TODO**: documentation for `OnMainThread`, `InThreadPool`, `SetExceptionHandler`, `GetTimerToken`, `GetElapsedTime`, `Shutdown`, `CreateNewScheduler`, `SetConcurrentThreadCount`
+    *TODO*: documentation for `OnMainThread`, `InThreadPool`, `SetExceptionHandler`, `GetTimerToken`, `GetElapsedTime`, `Shutdown`, `CreateNewScheduler`, `SetConcurrentThreadCount`
 
 
 - `ObservableAction<T>`
