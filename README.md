@@ -1,7 +1,7 @@
 [![DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/sator-imaging/Unity-Fundamentals)
 [![🇯🇵](https://img.shields.io/badge/API-Reference-blue)](https://sator-imaging.github.io/Unity-Fundamentals/api/index.html)
 &nbsp;
-[![🇯🇵](https://img.shields.io/badge/🇯🇵-日本語%20※詳説-789)](https://qiita.com/sator_imaging/items/235c8447f4171ba5a522)
+[![🇯🇵](https://img.shields.io/badge/🇯🇵-日本語_※詳説-789)](https://qiita.com/sator_imaging/items/235c8447f4171ba5a522)
 <!--
 [![🇯🇵](https://img.shields.io/badge/🇯🇵-日本語-789)](./README.ja.md)
 [![🇨🇳](https://img.shields.io/badge/🇨🇳-简体中文-789)](./README.zh-CN.md)
