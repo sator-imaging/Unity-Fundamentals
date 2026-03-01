@@ -270,7 +270,7 @@ or
 Non-alloc Unity coroutine implementation.
 [📘](https://sator-imaging.github.io/Unity-Fundamentals/api/SatorImaging.UnityFundamentals.ReusableCoroutine.html)
 or
-[日本語版](https://zenn.dev/sator_imaging/articles/b0ab667808d563#%E3%80%90unity%E3%80%91%E5%86%8D%E5%88%A9%E7%94%A8%E5%8F%AF%E8%83%BD%E3%81%AA%E3%82%B3%E3%83%AB%E3%83%BC%E3%83%81%E3%83%B3)
+[日本語版](https://zenn.dev/sator_imaging/articles/b0ab667808d563#【unity】再利用可能なコルーチン)
 
 
 
