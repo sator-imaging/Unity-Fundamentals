@@ -1,0 +1,94 @@
+name: Build Custom Roslyn DLL
+
+on:
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  PACKAGES: |
+    Microsoft.CodeAnalysis.CSharp.Scripting:4.8.0
+    Microsoft.CodeAnalysis.CSharp:4.8.0
+    Microsoft.CodeAnalysis:4.8.0
+    System.Collections.Immutable:1.9.0
+    System.Reflection.Metadata:7.0.0
+    ilrepack:2.0.18
+
+  NUGET_DIR: packages
+  ILREPACK_DIR: ilrepack_dir
+  OUTPUT_DIR: merged_dlls
+  OUTPUT_DLL_NAME: UniRoslyn.dll
+  PR_BRANCH: bot/UniRoslyn
+
+jobs:
+  build_and_pr:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install NuGet CLI
+        uses: NuGet/setup-nuget@v1
+
+      - name: Install GitHub CLI
+        uses: cli/gh-action@v2
+
+      - name: Prepare directories
+        run: |
+          mkdir -p "$NUGET_DIR" "$ILREPACK_DIR" "$OUTPUT_DIR"
+
+      - name: Download NuGet packages
+        run: |
+          while IFS= read -r pkg; do
+            [[ -z "$pkg" ]] && continue
+            id="${pkg%%:*}"
+            version="${pkg##*:}"
+            echo "Installing $id version $version"
+            nuget install "$id" -Version "$version" -OutputDirectory "$NUGET_DIR"
+          done <<< "$PACKAGES"
+
+      - name: Copy ILRepack.exe
+        run: |
+          ILREPACK_EXE=$(find "$NUGET_DIR"/ilrepack.* -name ILRepack.exe | head -n1)
+          cp "$ILREPACK_EXE" "$ILREPACK_DIR/ILRepack.exe"
+
+      - name: Merge DLLs with ILRepack
+        run: |
+          DLLS=""
+          while IFS= read -r pkg; do
+            [[ -z "$pkg" || "$pkg" == "ilrepack:2.0.18" ]] && continue
+            id="${pkg%%:*}"
+            version="${pkg##*:}"
+            dll="$NUGET_DIR/$id/$version/lib/netstandard2.0/$id.dll"
+            if [ -f "$dll" ]; then
+              DLLS="$DLLS $dll"
+            else
+              echo "Warning: $dll not found"
+            fi
+          done <<< "$PACKAGES"
+
+          echo "Merging DLLs: $DLLS"
+          "$ILREPACK_DIR/ILRepack.exe" /out:"$OUTPUT_DIR/$OUTPUT_DLL_NAME" $DLLS
+
+      - name: Commit and push PR branch
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$PR_BRANCH"
+          git add "$OUTPUT_DIR/$OUTPUT_DLL_NAME"
+          git commit -m "[bot] Update Custom Roslyn DLL via GitHub Actions"
+          git push -u origin "$PR_BRANCH" --force
+
+      - name: Create Pull Request
+        run: |
+          gh auth setup-git
+          gh pr create \
+            --title "[bot] Update Custom Roslyn DLL via GitHub Actions" \
+            --body "Automatically generated merged DLL" \
+            --head "$PR_BRANCH" \
+            --base main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
