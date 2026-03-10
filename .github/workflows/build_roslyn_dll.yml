@@ -33,9 +33,6 @@ jobs:
       - name: Install NuGet CLI
         uses: NuGet/setup-nuget@v1
 
-      - name: Install GitHub CLI
-        uses: cli/gh-action@v2
-
       - name: Prepare directories
         run: |
           mkdir -p "$NUGET_DIR" "$ILREPACK_DIR" "$OUTPUT_DIR"
