@@ -668,23 +668,15 @@ namespace SatorImaging.UnityFundamentals
 
         private static int GetVariantOrder(string methodName)
         {
+```suggestion
             string variant = GetVariantName(methodName);
-            if (variant == "In")
+            switch (variant)
             {
-                return 0;
+                case "In": return 0;
+                case "Out": return 1;
+                case "InOut": return 2;
+                default: return 3;
             }
-
-            if (variant == "Out")
-            {
-                return 1;
-            }
-
-            if (variant == "InOut")
-            {
-                return 2;
-            }
-
-            return 3;
         }
 
         private static int GetGroupOrder(string groupName)
