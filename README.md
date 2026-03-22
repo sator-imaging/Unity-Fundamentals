@@ -104,6 +104,8 @@ https://github.com/sator-imaging/Half-Ulid
 
 - `Atom<T>`  
 Thread safe primitive.
+[📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/Threading/Atom.cs.html)
+or
 [解説](https://zenn.dev/sator_imaging/articles/ed6dac717f5038)
 
 
@@ -160,6 +162,8 @@ List implementation of `Span<T>` especially designed to work with `Span<char>`.
 
 - `RustSharp`  
 Move semantics for .NET / Unity.
+[📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/FancyStuff/RustSharp.cs.html)
+or
 [解説](https://zenn.dev/sator_imaging/articles/e6428d4f1c8158)
 
 
