@@ -25,12 +25,8 @@ If `T` is reference type, the object properties can be modified in read lock con
 ```cs
 var atom = new Atom<MyClass>(value: new());
 
-atom.ReadLock(foo, async static (foo, myClass) =>
+atom.ReadLock(foo, static (foo, myClass) =>
 {
-    // NOTE: Lock is taken until the operation finished.
-    //       (e.g., For a second, other thread cannot access to the atom value at all)
-    await Task.Delay(1000);
-
     myClass.Data = foo.Value;
 });
 ```
@@ -55,9 +51,11 @@ namespace SatorImaging.UnityFundamentals
 
         public Atom(T value = (((default)))!)
         {
-            if (typeof(Task).IsAssignableFrom(typeof(T)) ||
-                typeof(ValueTask).IsAssignableFrom(typeof(T)) ||
-                typeof(ValueTask<>).IsAssignableFrom(typeof(T)))  // TODO: This check may not make sense
+            // TODO: typeof(T) is runtime constant but cache for Unity environment.
+            var typeOfT = typeof(T);
+            if (typeof(Task).IsAssignableFrom(typeOfT) ||
+                typeOfT == typeof(ValueTask) ||
+                (typeOfT.IsGenericType && typeOfT.GetGenericTypeDefinition() == typeof(ValueTask<>)))
             {
                 throw new NotSupportedException("Task-like type is not supported");
             }
