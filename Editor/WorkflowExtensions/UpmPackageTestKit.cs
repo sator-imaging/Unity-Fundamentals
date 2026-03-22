@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -67,11 +68,13 @@ Camera:
 
         /// <summary>
         /// <code>
-        /// 0: Version (ex: 6000.0.23f1)
+        /// 0: Version (ex: 2021.3.0f1)
+        /// 1: Changeset (ex: 6eacc8284459)
         /// </code>
         /// </summary>
         const string TMPL_PROJECT_VERSION_TXT =
 @"m_EditorVersion: {0}
+m_EditorVersionWithRevision: {0} ({1})
 "
         ;
 
@@ -150,6 +153,7 @@ timeout /nobreak -1
 @"using UnityEngine;
 using UnityEditor;
 using UnityEditor.Build;
+using UnityEditor.SceneManagement;
 
 public class BuildScript
 {{
@@ -168,12 +172,16 @@ public class BuildScript
         PlayerSettings.SetIl2CppCodeGeneration(named, Il2CppCodeGeneration.OptimizeSize);
 #endif
 
+        EditorSceneManager.OpenScene(""{0}"", OpenSceneMode.Single);
+
         BuildPipeline.BuildPlayer(
             new[] {{ new EditorBuildSettingsScene(""{0}"", true) }},
             ""{1}"",
             BuildTarget.StandaloneWindows64,
             BuildOptions.None
             );
+
+        Debug.Log($""✨ DONE: {{System.DateTimeOffset.Now}}"");
     }}
 }}
 "
@@ -232,7 +240,8 @@ public class BuildScript
             var unityInstalls = GetInstalledUnityversionDirPathsByMajorVersion().OrderBy(x => x.Key).AsEnumerable();
             foreach (var install in unityInstalls)
             {
-                UnityEngine.Debug.Log($"[{nameof(UpmPackageTestKit)}] Installed Unity {install.Key}...\n{string.Join("\n", install)}\n");
+                string msg = $"[{nameof(UpmPackageTestKit)}] Installed Unity {install.Key}...\n{string.Join("\n", install)}\n";
+                UnityEngine.Debug.Log(msg);
             }
         }
 
@@ -290,8 +299,22 @@ public class BuildScript
 
                 var exePath = Path.Combine(dirPath, UNITY_EXE_REL_PATH);
 
+                var fullVersion = Path.GetFileName(dirPath);
+                var changeset = FileVersionInfo.GetVersionInfo(exePath).ProductVersion;
+                {
+                    int pos = changeset.IndexOf('_');
+                    if (pos < 0)
+                    {
+                        throw new Exception("Unity changeset not found");
+                    }
+
+                    changeset = changeset.Substring(pos + 1);
+                    UnityEngine.Debug.Log($"[{nameof(UpmPackageTestKit)}]: Unity {fullVersion} ({changeset})");
+                }
+
                 outputDirPath = GenerateCleanEnvironment(
-                    Path.GetFileName(dirPath),
+                    fullVersion,
+                    changeset,
                     packageData.name,
                     packageFilePathOrGitUrl,
                     openWithExplorer: envCount == 0);
@@ -412,6 +435,7 @@ public class BuildScript
         /// <returns>Resulting output folder path.</returns>
         public static string GenerateCleanEnvironment(
             string fullUnityVersion,
+            string unityChangeset,
             string packageName,
             string packageVersionOrFilePathOrGitUrl,
             bool openWithExplorer = true,
@@ -438,7 +462,7 @@ public class BuildScript
                 string.Format(TMPL_BUILD_SCRIPT, BUILD_SCENE_PATH, BUILD_OUTPUT_EXE_REL_PATH));
 
             File.WriteAllText(Path.Combine(outputFolderPath, ProjectSettings, "ProjectVersion.txt"),
-                string.Format(TMPL_PROJECT_VERSION_TXT, fullUnityVersion));
+                string.Format(TMPL_PROJECT_VERSION_TXT, fullUnityVersion, unityChangeset));
 
             File.WriteAllText(Path.Combine(outputFolderPath, Packages, "manifest.json"),
                 string.Format(TMPL_MANIFEST_JSON, packageName, packageVersionOrFilePathOrGitUrl));
