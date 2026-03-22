@@ -681,57 +681,21 @@ namespace SatorImaging.UnityFundamentals
 
         private static int GetGroupOrder(string groupName)
         {
-            if (groupName == "Sine")
+```suggestion
+            switch (groupName)
             {
-                return 0;
+                case "Sine": return 0;
+                case "Cubic": return 1;
+                case "Quad": return 2;
+                case "Quart": return 3;
+                case "Back": return 4;
+                case "Quint": return 5;
+                case "Bounce": return 6;
+                case "Expo": return 7;
+                case "Elastic": return 8;
+                case "Circ": return 9;
+                default: return int.MaxValue;
             }
-
-            if (groupName == "Cubic")
-            {
-                return 1;
-            }
-
-            if (groupName == "Quad")
-            {
-                return 2;
-            }
-
-            if (groupName == "Quart")
-            {
-                return 3;
-            }
-
-            if (groupName == "Back")
-            {
-                return 4;
-            }
-
-            if (groupName == "Quint")
-            {
-                return 5;
-            }
-
-            if (groupName == "Bounce")
-            {
-                return 6;
-            }
-
-            if (groupName == "Expo")
-            {
-                return 7;
-            }
-
-            if (groupName == "Elastic")
-            {
-                return 8;
-            }
-
-            if (groupName == "Circ")
-            {
-                return 9;
-            }
-
-            return int.MaxValue;
         }
 
         private static Font? LoadBuiltinFont()
