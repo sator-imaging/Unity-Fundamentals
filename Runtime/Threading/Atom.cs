@@ -27,6 +27,10 @@ var atom = new Atom<MyClass>(value: new());
 
 atom.ReadLock(foo, static (foo, myClass) =>
 {
+    // NOTE: Lock is taken until the operation finished.
+    //       (e.g., For a second, other thread cannot access to the atom value at all)
+    System.Threading.Thread.Sleep(1000);
+
     myClass.Data = foo.Value;
 });
 ```
