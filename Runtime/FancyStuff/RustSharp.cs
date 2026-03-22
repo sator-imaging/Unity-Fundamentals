@@ -89,7 +89,7 @@ namespace SatorImaging.UnityFundamentals
             return ret;
         }
 
-        public void Take(AbsoluteOwnership<T> other) => _value = other.Move();
+        public void Take(ref AbsoluteOwnership<T> other) => _value = other.Move();
 
         public void Take([DisallowNull][MaybeNull] ref T other)
         {
