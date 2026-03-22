@@ -84,25 +84,9 @@ Transform `event Action<T>` to `IObservable<T>`.
 [📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/Reactive/ObservableEvent.cs.html)
 
 
-- `SpanList<T>`  
-List implementation of `Span<T>` especially designed to work with `Span<char>`.
-[📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/System/SpanList.cs.html)
-
-    - *TODO*: Add `(int, int) GetMinMaxLength()`
-        - To prevent enumerating repeatedly to get same result.
-        - Add `bool _isFrozen` to determine recalculate is required. `Write` turns it off when changed.
-        - Add `bool IsFormattable` with more strict token check: `{one}{two}` (currently accepted but must be rejected).
-        - One pass replacement for `FormatNonAlloc`: search for `{` then perform `.Slice(foundIndex, fromTokenMaxLength)`, check which one is match.
-
-
-- `Atom<T>`  
-Thread safe primitive.
-[解説](https://zenn.dev/sator_imaging/articles/ed6dac717f5038)
-
-
-- `RustSharp`  
-Move semantics for .NET / Unity.
-[解説](https://zenn.dev/sator_imaging/articles/e6428d4f1c8158)
+- **Easing Functions**: `EasingFloat` and `EasingDouble`  
+High performance easing functions (Unity Burst Compiler ready).
+[📘](https://x.com/sator_imaging/status/2035589017161596993)
 
 
 - `NetworkClock`  
@@ -116,6 +100,11 @@ or
 https://github.com/sator-imaging/Half-Ulid
 &nbsp;
 [実装の詳細](https://qiita.com/sator_imaging/items/576781d95367d5856624)
+
+
+- `Atom<T>`  
+Thread safe primitive.
+[解説](https://zenn.dev/sator_imaging/articles/ed6dac717f5038)
 
 
 - `MiniXXHash`  
@@ -156,6 +145,22 @@ or
     ```
 
     </details>
+
+
+- `SpanList<T>`  
+List implementation of `Span<T>` especially designed to work with `Span<char>`.
+[📘](https://sator-imaging.github.io/Unity-Fundamentals/HeaderDocs/Runtime/System/SpanList.cs.html)
+
+    - *TODO*: Add `(int, int) GetMinMaxLength()`
+        - To prevent enumerating repeatedly to get same result.
+        - Add `bool _isFrozen` to determine recalculate is required. `Write` turns it off when changed.
+        - Add `bool IsFormattable` with more strict token check: `{one}{two}` (currently accepted but must be rejected).
+        - One pass replacement for `FormatNonAlloc`: search for `{` then perform `.Slice(foundIndex, fromTokenMaxLength)`, check which one is match.
+
+
+- `RustSharp`  
+Move semantics for .NET / Unity.
+[解説](https://zenn.dev/sator_imaging/articles/e6428d4f1c8158)
 
 
 - `UString`  
