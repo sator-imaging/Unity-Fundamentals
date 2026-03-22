@@ -6,8 +6,7 @@
         "UnityEditor.UI",
         "Unity.TextMeshPro",
         "Unity.TextMeshPro.Editor",
-        "LambdaAssertions.Unity",
-        "Unity.Mathematics"
+        "LambdaAssertions.Unity"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -51,11 +50,6 @@
             "name": "com.sator-imaging.lambda-assertions.unity",
             "expression": "0",
             "define": "STMG_LAMBDAASSERTIONS_EXISTS"
-        },
-        {
-            "name": "com.unity.mathematics",
-            "expression": "0",
-            "define": "STMG_UNITYMATH_EXISTS"
         }
     ],
     "noEngineReferences": false

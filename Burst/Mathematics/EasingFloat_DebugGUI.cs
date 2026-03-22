@@ -1,5 +1,3 @@
-#if DEBUG
-
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -668,34 +666,32 @@ namespace SatorImaging.UnityFundamentals
 
         private static int GetVariantOrder(string methodName)
         {
-```suggestion
             string variant = GetVariantName(methodName);
-            switch (variant)
+            return variant switch
             {
-                case "In": return 0;
-                case "Out": return 1;
-                case "InOut": return 2;
-                default: return 3;
-            }
+                "In" => 0,
+                "Out" => 1,
+                "InOut" => 2,
+                _ => 3,
+            };
         }
 
         private static int GetGroupOrder(string groupName)
         {
-```suggestion
-            switch (groupName)
+            return groupName switch
             {
-                case "Sine": return 0;
-                case "Cubic": return 1;
-                case "Quad": return 2;
-                case "Quart": return 3;
-                case "Back": return 4;
-                case "Quint": return 5;
-                case "Bounce": return 6;
-                case "Expo": return 7;
-                case "Elastic": return 8;
-                case "Circ": return 9;
-                default: return int.MaxValue;
-            }
+                "Sine" => 0,
+                "Cubic" => 1,
+                "Quad" => 2,
+                "Quart" => 3,
+                "Back" => 4,
+                "Quint" => 5,
+                "Bounce" => 6,
+                "Expo" => 7,
+                "Elastic" => 8,
+                "Circ" => 9,
+                _ => int.MaxValue,
+            };
         }
 
         private static Font? LoadBuiltinFont()
@@ -704,5 +700,3 @@ namespace SatorImaging.UnityFundamentals
         }
     }
 }
-
-#endif
