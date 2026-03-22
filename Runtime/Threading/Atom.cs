@@ -39,6 +39,7 @@ atom.ReadLock(foo, static (foo, myClass) =>
 
 using System;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 
 #nullable enable
 #pragma warning disable IDE0032  // Use auto-implemented property
