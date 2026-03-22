@@ -1,0 +1,28 @@
+{
+    "name": "SatorImaging.UnityFundamentals.Burst",
+    "rootNamespace": "SatorImaging.UnityFundamentals.Burst",
+    "references": [
+        "Unity.Burst",
+        "Unity.Mathematics"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.burst",
+            "expression": "0",
+            "define": "STMG_BURST_EXISTS"
+        },
+        {
+            "name": "com.unity.mathematics",
+            "expression": "0",
+            "define": "STMG_UNITYMATH_EXISTS"
+        }
+    ],
+    "noEngineReferences": false
+}
