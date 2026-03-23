@@ -86,7 +86,7 @@ Transform `event Action<T>` to `IObservable<T>`.
 
 - **Easing Functions**: `EasingFloat` and `EasingDouble`  
 High performance easing functions (Unity Burst Compiler ready).
-[📘](https://x.com/sator_imaging/status/2035589017161596993)
+[📘](https://x.com/sator_imaging/status/2035921437433966891)
 
 
 - `NetworkClock`  
