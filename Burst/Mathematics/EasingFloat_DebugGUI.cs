@@ -20,6 +20,7 @@ namespace SatorImaging.UnityFundamentals
             public string FunctionName = string.Empty;
             public string VariantName = string.Empty;
             public Func<float, float>? Function;
+            public Image? MethodIndicator;
             public RectTransform? BarFill;
             public RectTransform? Ball;
             public RectTransform? MotionTrackBackground;
@@ -142,6 +143,13 @@ namespace SatorImaging.UnityFundamentals
                 float trackHeight = barTrack != null ? Mathf.Max(0.0f, barTrack.rect.height - 4.0f) : barMaxHeight;
                 float barHeight = Mathf.LerpUnclamped(0.0f, trackHeight, eased);
                 row.BarFill.sizeDelta = new Vector2(row.BarFill.sizeDelta.x, barHeight);
+
+                if (row.MethodIndicator != null)
+                {
+                    Color indicatorColor = row.MethodIndicator.color;
+                    indicatorColor.a = eased;
+                    row.MethodIndicator.color = indicatorColor;
+                }
 
                 RectTransform? motionTrack = row.Ball.parent as RectTransform;
                 RectTransform? motionTrackBackground = row.MotionTrackBackground;
@@ -288,6 +296,7 @@ namespace SatorImaging.UnityFundamentals
                         FunctionName = method.Name,
                         VariantName = variant,
                         Function = CreateFunction(method),
+                        MethodIndicator = rowTransform.Find("MethodRow/MethodIndicator")?.GetComponent<Image>(),
                         BarFill = rowTransform.Find("BarTrack/BarFill") as RectTransform,
                         Ball = rowTransform.Find("MotionTrack/Ball") as RectTransform,
                         MotionTrackBackground = rowTransform.Find("MotionTrack/TrackBg") as RectTransform
@@ -358,12 +367,33 @@ namespace SatorImaging.UnityFundamentals
                 BuildCurvePreview(variantPreview, row.Function);
             }
 
+            RectTransform methodRow = CreateUiObject<RectTransform>("MethodRow", rowRoot);
+            SetHorizontalBox(methodRow, 82.0f, 222.0f, 8.0f, rowHeight - 16.0f);
+
+            RectTransform methodIndicator = CreateUiObject<RectTransform>("MethodIndicator", methodRow);
+            methodIndicator.anchorMin = new Vector2(1.0f, 0.5f);
+            methodIndicator.anchorMax = new Vector2(1.0f, 0.5f);
+            methodIndicator.pivot = new Vector2(1.0f, 0.5f);
+            methodIndicator.anchoredPosition = new Vector2(0.0f, 0.0f);
+            methodIndicator.sizeDelta = new Vector2(rowHeight - 24.0f, rowHeight - 24.0f);
+            Image methodIndicatorImage = methodIndicator.gameObject.AddComponent<Image>();
+            methodIndicatorImage.color = new Color(1.0f, 1.0f, 1.0f, 0.0f);
+            row.MethodIndicator = methodIndicatorImage;
+
+            Text methodLabel = CreateText("MethodLabel", methodRow, variant, -1.0f);
+            methodLabel.rectTransform.anchorMin = new Vector2(0.0f, 0.0f);
+            methodLabel.rectTransform.anchorMax = new Vector2(1.0f, 1.0f);
+            methodLabel.rectTransform.pivot = new Vector2(0.0f, 0.5f);
+            methodLabel.rectTransform.offsetMin = new Vector2(8.0f, 0.0f);
+            methodLabel.rectTransform.offsetMax = new Vector2(-((rowHeight - 14.0f) + 8.0f), 0.0f);
+            methodLabel.fontSize = fontSize - 4;
+
             RectTransform barTrack = CreateBarTrack(rowRoot);
-            SetHorizontalBox(barTrack, 82.0f, 134.0f, 8.0f, rowHeight - 16.0f);
+            SetHorizontalBox(barTrack, 232.0f, 284.0f, 8.0f, rowHeight - 16.0f);
             row.BarFill = barTrack.Find("BarFill") as RectTransform;
 
             RectTransform motionTrack = CreateMotionTrack(rowRoot);
-            SetAnchoredStretchBox(motionTrack, 144.0f, 8.0f, 8.0f, rowHeight - 16.0f);
+            SetAnchoredStretchBox(motionTrack, 294.0f, 8.0f, 8.0f, rowHeight - 16.0f);
             row.Ball = motionTrack.Find("Ball") as RectTransform;
             row.MotionTrackBackground = motionTrack.Find("TrackBg") as RectTransform;
 

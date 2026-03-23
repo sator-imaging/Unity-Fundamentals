@@ -14,9 +14,13 @@
 
 
 
-// PRECISION SETTINGS
+/// DEBUG
+//#undef STMG_UNITYMATH_EXISTS
+//#undef STMG_BURST_EXISTS
 
-///#define __burst_float
+
+/// PRECISION SETTINGS
+//#define __burst_float
 
 using PRECISION = System.Double;
 using INTEGER = System.Int64;
@@ -24,12 +28,12 @@ using SYSMATH = System.Math;
 
 
 
-using System;
-using System.Runtime.CompilerServices;
-
 #if STMG_BURST_EXISTS
 using Unity.Burst;
 #endif
+
+using System;
+using System.Runtime.CompilerServices;
 
 #nullable enable
 #pragma warning disable IDE0065  // using directive placement
@@ -39,14 +43,11 @@ namespace SatorImaging.UnityFundamentals
 {
 #if STMG_UNITYMATH_EXISTS
     using Math = Unity.Mathematics.math;
-    internal static partial class UnityMathPolyfills { internal static void ToKeepUsingStatement(PRECISION _) => SYSMATH.Abs(_); }
 #else
 #pragma warning disable IDE1006  // Naming Styles
     using Math = SatorImaging.UnityFundamentals.UnityMathPolyfills;
     internal static partial class UnityMathPolyfills
     {
-        public const PRECISION PI = SYSMATH.PI;
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)] public static PRECISION exp(PRECISION x) => SYSMATH.Exp(x);
         [MethodImpl(MethodImplOptions.AggressiveInlining)] public static PRECISION sin(PRECISION x) => SYSMATH.Sin(x);
     }
@@ -165,9 +166,9 @@ namespace SatorImaging.UnityFundamentals
         }
 
         /// <summary>Uses approximate sine value.</summary>
-        public static PRECISION SineIn(PRECISION x) => 1.0 - Sin5((1.0 - x) * Math.PI * 0.5);
-        public static PRECISION SineOut(PRECISION x) => Sin5(x * Math.PI * 0.5);
-        public static PRECISION SineInOut(PRECISION x) => (1.0 - Sin5((0.5 - x) * Math.PI)) * 0.5;
+        public static PRECISION SineIn(PRECISION x) => 1.0 - Sin5((1.0 - x) * SYSMATH.PI * 0.5);
+        public static PRECISION SineOut(PRECISION x) => Sin5(x * SYSMATH.PI * 0.5);
+        public static PRECISION SineInOut(PRECISION x) => (1.0 - Sin5((0.5 - x) * SYSMATH.PI)) * 0.5;
 
 
         /*  Expo  ================================================================ */
@@ -261,8 +262,8 @@ namespace SatorImaging.UnityFundamentals
 
         /*  Elastic  ================================================================ */
 
-        private const PRECISION e_c4 = 2.0 * Math.PI / 3.0;
-        private const PRECISION e_c5 = 2.0 * Math.PI / 4.5;
+        private const PRECISION e_c4 = 2.0 * SYSMATH.PI / 3.0;
+        private const PRECISION e_c5 = 2.0 * SYSMATH.PI / 4.5;
 
         /// <summary>Simulates spring-like oscillations.</summary>
         public static PRECISION ElasticIn(PRECISION x)
