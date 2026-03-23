@@ -72,86 +72,32 @@ namespace SatorImaging.UnityFundamentals
 
         /// <summary><c>=> pow(x, 2f)</c></summary>
         public static PRECISION QuadIn(PRECISION x) => x * x;
-        public static PRECISION QuadOut(PRECISION x)
-        {
-            PRECISION t = 1.0f - x;
-            return 1.0f - (t * t);
-        }
-        public static PRECISION QuadInOut(PRECISION x)
-        {
-            if (x < 0.5f)
-            {
-                return 2.0f * x * x;
-            }
-
-            PRECISION t = (-2.0f * x) + 2.0f;
-            return 1.0f - (t * t * 0.5f);
-        }
+        public static PRECISION QuadOut(PRECISION x) => 1.0f - ((1.0f - x) * (1.0f - x));
+        public static PRECISION QuadInOut(PRECISION x) => x < 0.5f ? 2.0f * x * x : 1.0f - (((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * 0.5f);
 
 
         /*  Cubic  ================================================================ */
 
         /// <summary><c>=> pow(x, 3f)</c></summary>
         public static PRECISION CubicIn(PRECISION x) => x * x * x;
-        public static PRECISION CubicOut(PRECISION x)
-        {
-            PRECISION t = 1.0f - x;
-            return 1.0f - (t * t * t);
-        }
-        public static PRECISION CubicInOut(PRECISION x)
-        {
-            if (x < 0.5f)
-            {
-                return 4.0f * x * x * x;
-            }
-
-            PRECISION t = (-2.0f * x) + 2.0f;
-            return 1.0f - (t * t * t * 0.5f);
-        }
+        public static PRECISION CubicOut(PRECISION x) => 1.0f - ((1.0f - x) * (1.0f - x) * (1.0f - x));
+        public static PRECISION CubicInOut(PRECISION x) => x < 0.5f ? 4.0f * x * x * x : 1.0f - (((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * 0.5f);
 
 
         /*  Quart  ================================================================ */
 
         /// <summary><c>=> pow(x, 4f)</c></summary>
         public static PRECISION QuartIn(PRECISION x) => x * x * x * x;
-        public static PRECISION QuartOut(PRECISION x)
-        {
-            PRECISION t = 1.0f - x;
-            return 1.0f - (t * t * t * t);
-        }
-        public static PRECISION QuartInOut(PRECISION x)
-        {
-            if (x < 0.5f)
-            {
-                return 8.0f * x * x * x * x;
-            }
-
-            PRECISION t = (-2.0f * x) + 2.0f;
-            PRECISION t2 = t * t;
-            return 1.0f - (t2 * t2 * 0.5f);
-        }
+        public static PRECISION QuartOut(PRECISION x) => 1.0f - ((1.0f - x) * (1.0f - x) * (1.0f - x) * (1.0f - x));
+        public static PRECISION QuartInOut(PRECISION x) => x < 0.5f ? 8.0f * x * x * x * x : 1.0f - (((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * 0.5f);
 
 
         /*  Quint  ================================================================ */
 
         /// <summary><c>=> pow(x, 5f)</c></summary>
         public static PRECISION QuintIn(PRECISION x) => x * x * x * x * x;
-        public static PRECISION QuintOut(PRECISION x)
-        {
-            PRECISION t = 1.0f - x;
-            return 1.0f - (t * t * t * t * t);
-        }
-        public static PRECISION QuintInOut(PRECISION x)
-        {
-            if (x < 0.5f)
-            {
-                return 16.0f * x * x * x * x * x;
-            }
-
-            PRECISION t = (-2.0f * x) + 2.0f;
-            PRECISION t2 = t * t;
-            return 1.0f - (t2 * t2 * t * 0.5f);
-        }
+        public static PRECISION QuintOut(PRECISION x) => 1.0f - ((1.0f - x) * (1.0f - x) * (1.0f - x) * (1.0f - x) * (1.0f - x));
+        public static PRECISION QuintInOut(PRECISION x) => x < 0.5f ? 16.0f * x * x * x * x * x : 1.0f - (((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * 0.5f);
 
 
         /*  Sine  ================================================================ */
@@ -164,10 +110,7 @@ namespace SatorImaging.UnityFundamentals
             const PRECISION inv120 = 1.0f / 120.0f;
 
             // sin(t) ≈ t - t^3f/6f + t^5f/120f
-            PRECISION t2 = t * t;
-            PRECISION t3 = t2 * t;
-            PRECISION t5 = t3 * t2;
-            return t - (t3 * inv6) + (t5 * inv120);
+            return t - (t * t * t * inv6) + (t * t * t * t * t * inv120);
         }
 
         /// <summary>Uses approximate sine value.</summary>
@@ -183,22 +126,7 @@ namespace SatorImaging.UnityFundamentals
         /// <summary><c>=> pow(2.0f, 10.0f * x - 10.0f)</c></summary>
         public static PRECISION ExpoIn(PRECISION x) => x == 0.0f ? 0.0f : Math.exp(((10.0f * x) - 10.0f) * ln_2);
         public static PRECISION ExpoOut(PRECISION x) => x == 1.0f ? 1.0f : 1.0f - Math.exp((-10.0f * x) * ln_2);
-        public static PRECISION ExpoInOut(PRECISION x)
-        {
-            if (x == 0.0f)
-            {
-                return 0.0f;
-            }
-            if (x == 1.0f)
-            {
-                return 1.0f;
-            }
-
-            PRECISION t = (20.0f * x) - 10.0f;
-            return x < 0.5f
-                ? Math.exp(t * ln_2) * 0.5f
-                : (2.0f - Math.exp((-t) * ln_2)) * 0.5f;
-        }
+        public static PRECISION ExpoInOut(PRECISION x) => x == 0.0f ? 0.0f : (x == 1.0f ? 1.0f : (x < 0.5f ? Math.exp(((20.0f * x) - 10.0f) * ln_2) * 0.5f : (2.0f - Math.exp((10.0f - (20.0f * x)) * ln_2)) * 0.5f));
 
 
         /*  Circ  ================================================================ */
@@ -222,22 +150,8 @@ namespace SatorImaging.UnityFundamentals
 
         /// <summary><c>=> 1.0f - sqrt(1.0f - x * x)</c></summary>
         public static PRECISION CircIn(PRECISION x) => 1.0f - FastSqrt(1.0f - (x * x));
-        public static PRECISION CircOut(PRECISION x)
-        {
-            PRECISION t = x - 1.0f;
-            return FastSqrt(1.0f - (t * t));
-        }
-        public static PRECISION CircInOut(PRECISION x)
-        {
-            PRECISION t = 2.0f * x;
-            if (x < 0.5f)
-            {
-                return (1.0f - FastSqrt(1.0f - (t * t))) * 0.5f;
-            }
-
-            PRECISION u = 2.0f - t;
-            return (FastSqrt(1.0f - (u * u)) + 1.0f) * 0.5f;
-        }
+        public static PRECISION CircOut(PRECISION x) => FastSqrt(1.0f - ((x - 1.0f) * (x - 1.0f)));
+        public static PRECISION CircInOut(PRECISION x) => x < 0.5f ? (1.0f - FastSqrt(1.0f - ((2.0f * x) * (2.0f * x)))) * 0.5f : (FastSqrt(1.0f - ((2.0f - (2.0f * x)) * (2.0f - (2.0f * x)))) + 1.0f) * 0.5f;
 
 
         /*  Back  ================================================================ */
@@ -247,22 +161,8 @@ namespace SatorImaging.UnityFundamentals
 
         /// <summary>Overshoots the range once and returns.</summary>
         public static PRECISION BackIn(PRECISION x) => ((c1 + 1.0f) * x * x * x) - (c1 * x * x);
-        public static PRECISION BackOut(PRECISION x)
-        {
-            PRECISION t = x - 1.0f;
-            return 1.0f + ((c1 + 1.0f) * t * t * t) + (c1 * t * t);
-        }
-        public static PRECISION BackInOut(PRECISION x)
-        {
-            PRECISION t = 2.0f * x;
-            if (x < 0.5f)
-            {
-                return (t * t * (((c2 + 1.0f) * t) - c2)) * 0.5f;
-            }
-
-            PRECISION u = t - 2.0f;
-            return ((u * u * (((c2 + 1.0f) * u) + c2)) + 2.0f) * 0.5f;
-        }
+        public static PRECISION BackOut(PRECISION x) => 1.0f + ((c1 + 1.0f) * (x - 1.0f) * (x - 1.0f) * (x - 1.0f)) + (c1 * (x - 1.0f) * (x - 1.0f));
+        public static PRECISION BackInOut(PRECISION x) => x < 0.5f ? ((2.0f * x) * (2.0f * x) * (((c2 + 1.0f) * (2.0f * x)) - c2)) * 0.5f : (((2.0f * x - 2.0f) * (2.0f * x - 2.0f) * (((c2 + 1.0f) * (2.0f * x - 2.0f)) + c2)) + 2.0f) * 0.5f;
 
 
         /*  Elastic  ================================================================ */
