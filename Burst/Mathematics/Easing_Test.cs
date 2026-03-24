@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Text;
 
 namespace SatorImaging.UnityFundamentals
 {
@@ -46,6 +47,8 @@ namespace SatorImaging.UnityFundamentals
                 }
             }
 
+            var sb = new StringBuilder();
+
             // Value Validation
             foreach (var name in classMethodNames)
             {
@@ -65,9 +68,10 @@ namespace SatorImaging.UnityFundamentals
                         throw new Exception($"Easing Test Failed: {type.Name}.{name}({t}) expected {expected[i]}, got {result}");
                     }
                 }
+                sb.AppendLine($"[Pass] {type.Name}.{name}");
             }
 
-            return $"[{nameof(Easing_Test)}] {type.Name} tests successfully completed";
+            return sb.ToString().Trim();
         }
 
         private static readonly Dictionary<string, float[]> ExpectedValues = new Dictionary<string, float[]>
