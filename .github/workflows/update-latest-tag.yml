@@ -1,0 +1,27 @@
+name: 'Update `latest` tag on release'
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  update-latest-tag:
+    runs-on: ubuntu-slim
+
+    if: github.event.release.prerelease == false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # タグ操作のために必要
+
+      - name: Set up git
+        run: |
+          git config user.name  "github-actions"
+          git config user.email "github-actions@github.com"
+
+      - name: Update latest tag
+        run: |
+          git tag -f latest ${{ github.sha }}
+          git push origin -f latest
