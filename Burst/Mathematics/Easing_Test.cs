@@ -14,30 +14,42 @@ namespace SatorImaging.UnityFundamentals
 
         private static void TestType(Type type, Type scalarType)
         {
-            // Verify all expected methods exist in the target type with the correct signature.
-            foreach (var pair in ExpectedValues)
+            // Collect all public static methods matching the easing signature: PRECISION Func(PRECISION x)
+            MethodInfo[] allMethods = type.GetMethods(BindingFlags.Public | BindingFlags.Static);
+            var classMethodNames = new HashSet<string>();
+            foreach (var method in allMethods)
             {
-                MethodInfo? method = type.GetMethod(pair.Key, BindingFlags.Public | BindingFlags.Static, null, new Type[] { scalarType }, null);
-                if (method == null || method.ReturnType != scalarType)
+                var parameters = method.GetParameters();
+                if (method.ReturnType == scalarType && parameters.Length == 1 && parameters[0].ParameterType == scalarType)
                 {
-                    throw new Exception($"Easing Test Failed: Method {type.Name}.{pair.Key} does not exist or has an incorrect signature.");
+                    classMethodNames.Add(method.Name);
                 }
             }
 
-            // Verify all public static easing methods in the type are covered by ExpectedValues.
-            MethodInfo[] methods = type.GetMethods(BindingFlags.Public | BindingFlags.Static);
-            foreach (var method in methods)
+            // Bidirectional Existence Check
+            // 1. Ensure all methods in the class are present in ExpectedValues.
+            foreach (var name in classMethodNames)
             {
-                var parameters = method.GetParameters();
-                if (method.ReturnType != scalarType || parameters.Length != 1 || parameters[0].ParameterType != scalarType)
-                    continue;
-
-                if (!ExpectedValues.ContainsKey(method.Name))
+                if (!ExpectedValues.ContainsKey(name))
                 {
-                    throw new Exception($"Easing Test Failed: Method {type.Name}.{method.Name} exists but is missing from ExpectedValues.");
+                    throw new Exception($"Easing Test Failed: Method {type.Name}.{name} exists in class but is missing from ExpectedValues dictionary.");
                 }
+            }
 
-                float[] expected = ExpectedValues[method.Name];
+            // 2. Ensure all entries in ExpectedValues exist in the class.
+            foreach (var pair in ExpectedValues)
+            {
+                if (!classMethodNames.Contains(pair.Key))
+                {
+                    throw new Exception($"Easing Test Failed: Entry '{pair.Key}' in ExpectedValues has no corresponding public method in {type.Name}.");
+                }
+            }
+
+            // Value Validation
+            foreach (var name in classMethodNames)
+            {
+                MethodInfo method = type.GetMethod(name, BindingFlags.Public | BindingFlags.Static, null, new Type[] { scalarType }, null)!;
+                float[] expected = ExpectedValues[name];
                 for (int i = 0; i <= 10; i++)
                 {
                     float t = i * 0.1f;
@@ -45,12 +57,11 @@ namespace SatorImaging.UnityFundamentals
                     object resultObj = method.Invoke(null, new object[] { tObj });
                     float result = scalarType == typeof(float) ? (float)resultObj : (float)(double)resultObj;
 
-                    // Use 0.0001f tolerance as requested in the original task.
-                    // Midpoint values are used for approximation-heavy functions to ensure both float and double pass.
-                    // 1e-6f is too tight for shared hardcoded values when bit-manipulation approximations are involved.
+                    // Use 0.0001f tolerance as requested.
+                    // Midpoint values ensure both float and double pass despite implementation-specific approximations (FastSqrt, Sin5).
                     if (Math.Abs(result - expected[i]) > 0.0001f)
                     {
-                        throw new Exception($"Easing Test Failed: {type.Name}.{method.Name}({t}) expected {expected[i]}, got {result}");
+                        throw new Exception($"Easing Test Failed: {type.Name}.{name}({t}) expected {expected[i]}, got {result}");
                     }
                 }
             }
@@ -59,7 +70,7 @@ namespace SatorImaging.UnityFundamentals
         private static readonly Dictionary<string, float[]> ExpectedValues = new Dictionary<string, float[]>
         {
             { "BackIn", new float[] { 0.0000000f, -0.0143142f, -0.0464506f, -0.0801995f, -0.0993517f, -0.0876975f, -0.0290275f, 0.0928677f, 0.2941978f, 0.5911720f, 1.0000000f } },
-            { "BackInOut", new float[] { 0.0000000f, -0.0375186f, -0.0925557f, -0.0788335f, 0.0899258f, 0.5000000f, 0.9100742f, 1.0788335f, 1.0925557f, 1.0375186f, 1.0000000f } },
+            { "BackInOut", new float[] { -0.0000000f, -0.0375186f, -0.0925557f, -0.0788335f, 0.0899258f, 0.5000000f, 0.9100742f, 1.0788335f, 1.0925557f, 1.0375186f, 1.0000000f } },
             { "BackOut", new float[] { 0.0000000f, 0.4088280f, 0.7058022f, 0.9071323f, 1.0290275f, 1.0876975f, 1.0993517f, 1.0801995f, 1.0464506f, 1.0143142f, 1.0000000f } },
             { "BounceIn", new float[] { 0.0000000f, 0.0118750f, 0.0600000f, 0.0693750f, 0.2275000f, 0.2343750f, 0.0900000f, 0.3193750f, 0.6975000f, 0.9243750f, 1.0000000f } },
             { "BounceInOut", new float[] { 0.0000000f, 0.0300000f, 0.1137500f, 0.0450000f, 0.3487500f, 0.5000000f, 0.6512500f, 0.9550000f, 0.8862500f, 0.9700000f, 1.0000000f } },
