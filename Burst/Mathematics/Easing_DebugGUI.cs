@@ -12,7 +12,7 @@ namespace SatorImaging.UnityFundamentals
     [RequireComponent(typeof(Canvas))]
     [RequireComponent(typeof(CanvasScaler))]
     [RequireComponent(typeof(GraphicRaycaster))]
-    public sealed class EasingFloat_DebugGUI : MonoBehaviour
+    public sealed class Easing_DebugGUI : MonoBehaviour
     {
         [Serializable]
         private sealed class DemoRow
@@ -74,7 +74,8 @@ namespace SatorImaging.UnityFundamentals
 
         private void Awake()
         {
-            Easing_Test.Run();
+            Debug.Log(Easing_Test.Run());
+
             ConfigureRootComponents();
         }
 

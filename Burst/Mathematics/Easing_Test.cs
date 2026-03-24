@@ -6,13 +6,14 @@ namespace SatorImaging.UnityFundamentals
 {
     public static class Easing_Test
     {
-        public static void Run()
+        public static string Run()
         {
-            TestType(typeof(EasingFloat), typeof(float));
-            TestType(typeof(EasingDouble), typeof(double));
+            return TestType(typeof(EasingFloat), typeof(float))
+                + "\n"
+                + TestType(typeof(EasingDouble), typeof(double));
         }
 
-        private static void TestType(Type type, Type scalarType)
+        private static string TestType(Type type, Type scalarType)
         {
             // Collect all public static methods matching the easing signature: PRECISION Func(PRECISION x)
             MethodInfo[] allMethods = type.GetMethods(BindingFlags.Public | BindingFlags.Static);
@@ -65,6 +66,8 @@ namespace SatorImaging.UnityFundamentals
                     }
                 }
             }
+
+            return $"[{nameof(Easing_Test)}] {type.Name} tests successfully completed";
         }
 
         private static readonly Dictionary<string, float[]> ExpectedValues = new Dictionary<string, float[]>
