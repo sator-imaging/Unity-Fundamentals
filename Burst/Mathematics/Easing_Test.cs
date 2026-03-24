@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Text;
 
 namespace SatorImaging.UnityFundamentals
 {
@@ -12,145 +14,64 @@ namespace SatorImaging.UnityFundamentals
                 + TestType(typeof(EasingDouble), typeof(double));
         }
 
-        private static readonly string[] EasingMethodNames = new string[]
-        {
-            "BackIn", "BackInOut", "BackOut",
-            "BounceIn", "BounceInOut", "BounceOut",
-            "CircIn", "CircInOut", "CircOut",
-            "CubicIn", "CubicInOut", "CubicOut",
-            "ElasticIn", "ElasticInOut", "ElasticOut",
-            "ExpoIn", "ExpoInOut", "ExpoOut",
-            "QuadIn", "QuadInOut", "QuadOut",
-            "QuartIn", "QuartInOut", "QuartOut",
-            "QuintIn", "QuintInOut", "QuintOut",
-            "SineIn", "SineInOut", "SineOut",
-        };
-
         private static string TestType(Type type, Type scalarType)
         {
+            // Collect all public static methods matching the easing signature: PRECISION Func(PRECISION x)
+            MethodInfo[] allMethods = type.GetMethods(BindingFlags.Public | BindingFlags.Static);
+            var classMethodNames = new HashSet<string>();
+            foreach (var method in allMethods)
+            {
+                var parameters = method.GetParameters();
+                if (method.ReturnType == scalarType && parameters.Length == 1 && parameters[0].ParameterType == scalarType)
+                {
+                    classMethodNames.Add(method.Name);
+                }
+            }
+
             // Bidirectional Existence Check
-            // 1. Ensure all hardcoded names are present in ExpectedValues.
-            foreach (var name in EasingMethodNames)
+            // 1. Ensure all methods in the class are present in ExpectedValues.
+            foreach (var name in classMethodNames)
             {
                 if (!ExpectedValues.ContainsKey(name))
                 {
-                    throw new Exception($"Easing Test Failed: Method name '{name}' in EasingMethodNames is missing from ExpectedValues dictionary.");
+                    throw new Exception($"Easing Test Failed: Method {type.Name}.{name} exists in class but is missing from ExpectedValues dictionary.");
                 }
             }
 
-            // 2. Ensure all entries in ExpectedValues exist in EasingMethodNames.
-            var nameSet = new HashSet<string>(EasingMethodNames);
+            // 2. Ensure all entries in ExpectedValues exist in the class.
             foreach (var pair in ExpectedValues)
             {
-                if (!nameSet.Contains(pair.Key))
+                if (!classMethodNames.Contains(pair.Key))
                 {
-                    throw new Exception($"Easing Test Failed: Entry '{pair.Key}' in ExpectedValues is missing from EasingMethodNames.");
+                    throw new Exception($"Easing Test Failed: Entry '{pair.Key}' in ExpectedValues has no corresponding public method in {type.Name}.");
                 }
             }
 
+            var sb = new StringBuilder();
+
             // Value Validation
-            foreach (var name in EasingMethodNames)
+            foreach (var name in classMethodNames)
             {
+                MethodInfo method = type.GetMethod(name, BindingFlags.Public | BindingFlags.Static, null, new Type[] { scalarType }, null)!;
                 float[] expected = ExpectedValues[name];
                 for (int i = 0; i <= 10; i++)
                 {
                     float t = i * 0.1f;
-                    float result = 0;
-
-                    if (type == typeof(EasingFloat))
-                    {
-                        result = InvokeFloat(name, t);
-                    }
-                    else if (type == typeof(EasingDouble))
-                    {
-                        result = (float)InvokeDouble(name, (double)t);
-                    }
+                    object tObj = scalarType == typeof(float) ? (object)t : (object)(double)t;
+                    object resultObj = method.Invoke(null, new object[] { tObj });
+                    float result = scalarType == typeof(float) ? (float)resultObj : (float)(double)resultObj;
 
                     // Use 0.0001f tolerance as requested.
+                    // Midpoint values ensure both float and double pass despite implementation-specific approximations (FastSqrt, Sin5).
                     if (Math.Abs(result - expected[i]) > 0.0001f)
                     {
                         throw new Exception($"Easing Test Failed: {type.Name}.{name}({t}) expected {expected[i]}, got {result}");
                     }
                 }
+                sb.AppendLine($"[Pass] {type.Name}.{name}");
             }
 
-            return $"[Pass] [{nameof(Easing_Test)}] {type.Name} tests successfully completed";
-        }
-
-        private static float InvokeFloat(string name, float x)
-        {
-            return name switch
-            {
-                "BackIn" => EasingFloat.BackIn(x),
-                "BackInOut" => EasingFloat.BackInOut(x),
-                "BackOut" => EasingFloat.BackOut(x),
-                "BounceIn" => EasingFloat.BounceIn(x),
-                "BounceInOut" => EasingFloat.BounceInOut(x),
-                "BounceOut" => EasingFloat.BounceOut(x),
-                "CircIn" => EasingFloat.CircIn(x),
-                "CircInOut" => EasingFloat.CircInOut(x),
-                "CircOut" => EasingFloat.CircOut(x),
-                "CubicIn" => EasingFloat.CubicIn(x),
-                "CubicInOut" => EasingFloat.CubicInOut(x),
-                "CubicOut" => EasingFloat.CubicOut(x),
-                "ElasticIn" => EasingFloat.ElasticIn(x),
-                "ElasticInOut" => EasingFloat.ElasticInOut(x),
-                "ElasticOut" => EasingFloat.ElasticOut(x),
-                "ExpoIn" => EasingFloat.ExpoIn(x),
-                "ExpoInOut" => EasingFloat.ExpoInOut(x),
-                "ExpoOut" => EasingFloat.ExpoOut(x),
-                "QuadIn" => EasingFloat.QuadIn(x),
-                "QuadInOut" => EasingFloat.QuadInOut(x),
-                "QuadOut" => EasingFloat.QuadOut(x),
-                "QuartIn" => EasingFloat.QuartIn(x),
-                "QuartInOut" => EasingFloat.QuartInOut(x),
-                "QuartOut" => EasingFloat.QuartOut(x),
-                "QuintIn" => EasingFloat.QuintIn(x),
-                "QuintInOut" => EasingFloat.QuintInOut(x),
-                "QuintOut" => EasingFloat.QuintOut(x),
-                "SineIn" => EasingFloat.SineIn(x),
-                "SineInOut" => EasingFloat.SineInOut(x),
-                "SineOut" => EasingFloat.SineOut(x),
-                _ => throw new ArgumentException($"Invalid easing method name: {name}")
-            };
-        }
-
-        private static double InvokeDouble(string name, double x)
-        {
-            return name switch
-            {
-                "BackIn" => EasingDouble.BackIn(x),
-                "BackInOut" => EasingDouble.BackInOut(x),
-                "BackOut" => EasingDouble.BackOut(x),
-                "BounceIn" => EasingDouble.BounceIn(x),
-                "BounceInOut" => EasingDouble.BounceInOut(x),
-                "BounceOut" => EasingDouble.BounceOut(x),
-                "CircIn" => EasingDouble.CircIn(x),
-                "CircInOut" => EasingDouble.CircInOut(x),
-                "CircOut" => EasingDouble.CircOut(x),
-                "CubicIn" => EasingDouble.CubicIn(x),
-                "CubicInOut" => EasingDouble.CubicInOut(x),
-                "CubicOut" => EasingDouble.CubicOut(x),
-                "ElasticIn" => EasingDouble.ElasticIn(x),
-                "ElasticInOut" => EasingDouble.ElasticInOut(x),
-                "ElasticOut" => EasingDouble.ElasticOut(x),
-                "ExpoIn" => EasingDouble.ExpoIn(x),
-                "ExpoInOut" => EasingDouble.ExpoInOut(x),
-                "ExpoOut" => EasingDouble.ExpoOut(x),
-                "QuadIn" => EasingDouble.QuadIn(x),
-                "QuadInOut" => EasingDouble.QuadInOut(x),
-                "QuadOut" => EasingDouble.QuadOut(x),
-                "QuartIn" => EasingDouble.QuartIn(x),
-                "QuartInOut" => EasingDouble.QuartInOut(x),
-                "QuartOut" => EasingDouble.QuartOut(x),
-                "QuintIn" => EasingDouble.QuintIn(x),
-                "QuintInOut" => EasingDouble.QuintInOut(x),
-                "QuintOut" => EasingDouble.QuintOut(x),
-                "SineIn" => EasingDouble.SineIn(x),
-                "SineInOut" => EasingDouble.SineInOut(x),
-                "SineOut" => EasingDouble.SineOut(x),
-                _ => throw new ArgumentException($"Invalid easing method name: {name}")
-            };
+            return sb.ToString().Trim();
         }
 
         private static readonly Dictionary<string, float[]> ExpectedValues = new Dictionary<string, float[]>

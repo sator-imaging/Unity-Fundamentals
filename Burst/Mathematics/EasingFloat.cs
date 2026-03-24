@@ -27,10 +27,6 @@
 /// PRECISION SETTINGS
 #define __burst_float
 
-using PRECISION = System.Single;
-using INTEGER = System.Int32;
-using SYSMATH = UnityEngine.Mathf;
-
 
 
 #if STMG_BURST_EXISTS
@@ -46,6 +42,10 @@ using System.Runtime.CompilerServices;
 
 namespace SatorImaging.UnityFundamentals
 {
+    using PRECISION = System.Single;
+    using INTEGER = System.Int32;
+    using SYSMATH = UnityEngine.Mathf;
+
 #if STMG_UNITYMATH_EXISTS
     using Math = Unity.Mathematics.math;
 #else
