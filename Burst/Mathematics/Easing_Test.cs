@@ -61,9 +61,11 @@ namespace SatorImaging.UnityFundamentals
                     object resultObj = method.Invoke(null, new object[] { tObj });
                     float result = scalarType == typeof(float) ? (float)resultObj : (float)(double)resultObj;
 
-                    // Use 0.0005f tolerance to accommodate float vs double approximation differences.
+                    // Relaxed tolerance for Circ functions to accommodate float vs double approximation differences.
+                    float tolerance = name.StartsWith("Circ") ? 0.0002f : 0.0001f;
+
                     // Midpoint values ensure both float and double pass despite implementation-specific approximations (FastSqrt, Sin5).
-                    if (Math.Abs(result - expected[i]) > 0.0005f)
+                    if (Math.Abs(result - expected[i]) > tolerance)
                     {
                         throw new Exception($"Easing Test Failed: {type.Name}.{name}({t}) expected {expected[i]}, got {result}");
                     }
@@ -82,8 +84,8 @@ namespace SatorImaging.UnityFundamentals
             { "BounceIn", new float[] { 0.0000000f, 0.0118750f, 0.0600000f, 0.0693750f, 0.2275000f, 0.2343750f, 0.0900000f, 0.3193750f, 0.6975000f, 0.9243750f, 1.0000000f } },
             { "BounceInOut", new float[] { 0.0000000f, 0.0300000f, 0.1137500f, 0.0450000f, 0.3487500f, 0.5000000f, 0.6512500f, 0.9550000f, 0.8862500f, 0.9700000f, 1.0000000f } },
             { "BounceOut", new float[] { 0.0000000f, 0.0756250f, 0.3025000f, 0.6806250f, 0.9100000f, 0.7656250f, 0.7725000f, 0.9306250f, 0.9400000f, 0.9881250f, 1.0000000f } },
-            { "CircIn", new float[] { -0.0000001f, 0.0049986f, 0.0201951f, 0.0453235f, 0.0818149f, 0.1330434f, 0.1998041f, 0.2847734f, 0.3995216f, 0.5635874f, 1.0000000f } },
-            { "CircInOut", new float[] { -0.0000000f, 0.0100975f, 0.0409075f, 0.0999021f, 0.1997608f, 0.5000000f, 0.8002393f, 0.9000980f, 0.9590925f, 0.9899025f, 1.0000000f } },
+            { "CircIn", new float[] { 0.0000000f, 0.0049986f, 0.0201951f, 0.0453235f, 0.0818149f, 0.1330434f, 0.1998041f, 0.2847734f, 0.3995216f, 0.5635874f, 1.0000000f } },
+            { "CircInOut", new float[] { 0.0000000f, 0.0100975f, 0.0409075f, 0.0999021f, 0.1997608f, 0.5000000f, 0.8002393f, 0.9000980f, 0.9590925f, 0.9899025f, 1.0000000f } },
             { "CircOut", new float[] { 0.0000000f, 0.4364126f, 0.6004785f, 0.7152266f, 0.8001959f, 0.8669566f, 0.9181851f, 0.9546765f, 0.9798049f, 0.9950014f, 1.0000000f } },
             { "CubicIn", new float[] { 0.0000000f, 0.0010000f, 0.0080000f, 0.0270000f, 0.0640000f, 0.1250000f, 0.2160000f, 0.3430000f, 0.5120000f, 0.7290000f, 1.0000000f } },
             { "CubicInOut", new float[] { 0.0000000f, 0.0040000f, 0.0320000f, 0.1080000f, 0.2560000f, 0.5000000f, 0.7440000f, 0.8920000f, 0.9680000f, 0.9960000f, 1.0000000f } },
