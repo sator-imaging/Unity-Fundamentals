@@ -4,6 +4,9 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: write
+
 jobs:
   update-latest-tag:
     runs-on: ubuntu-slim
@@ -14,7 +17,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # タグ操作のために必要
+          fetch-depth: 0  # Required to update tag
 
       - name: Set up git
         run: |
