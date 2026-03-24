@@ -109,9 +109,9 @@ namespace SatorImaging.UnityFundamentals
         }
 
         /// <summary>Uses approximate sine value.</summary>
-        public static PRECISION SineIn(PRECISION x) => 1.0 - Sin5((1.0 - x) * SYSMATH.PI * 0.5);
-        public static PRECISION SineOut(PRECISION x) => Sin5(x * SYSMATH.PI * 0.5);
-        public static PRECISION SineInOut(PRECISION x) => (1.0 - Sin5((0.5 - x) * SYSMATH.PI)) * 0.5;
+        public static PRECISION SineIn(PRECISION x) => x == 0.0 ? 0.0 : (x == 1.0 ? 1.0 : 1.0 - Sin5((1.0 - x) * SYSMATH.PI * 0.5));
+        public static PRECISION SineOut(PRECISION x) => x == 0.0 ? 0.0 : (x == 1.0 ? 1.0 : Sin5(x * SYSMATH.PI * 0.5));
+        public static PRECISION SineInOut(PRECISION x) => x == 0.0 ? 0.0 : (x == 1.0 ? 1.0 : (1.0 - Sin5((0.5 - x) * SYSMATH.PI)) * 0.5);
 
 
         /*  Expo  ================================================================ */
@@ -139,9 +139,9 @@ namespace SatorImaging.UnityFundamentals
         }
 
         /// <summary><c>=> 1.0 - sqrt(1.0 - x * x)</c></summary>
-        public static PRECISION CircIn(PRECISION x) => 1.0 - FastSqrt(1.0 - (x * x));
-        public static PRECISION CircOut(PRECISION x) => FastSqrt(1.0 - ((x - 1.0) * (x - 1.0)));
-        public static PRECISION CircInOut(PRECISION x) => x < 0.5 ? (1.0 - FastSqrt(1.0 - ((2.0 * x) * (2.0 * x)))) * 0.5 : (FastSqrt(1.0 - ((2.0 - (2.0 * x)) * (2.0 - (2.0 * x)))) + 1.0) * 0.5;
+        public static PRECISION CircIn(PRECISION x) => x == 0.0 ? 0.0 : (x == 1.0 ? 1.0 : 1.0 - FastSqrt(1.0 - (x * x)));
+        public static PRECISION CircOut(PRECISION x) => x == 0.0 ? 0.0 : (x == 1.0 ? 1.0 : FastSqrt(1.0 - ((x - 1.0) * (x - 1.0))));
+        public static PRECISION CircInOut(PRECISION x) => x == 0.0 ? 0.0 : (x == 1.0 ? 1.0 : (x < 0.5 ? (1.0 - FastSqrt(1.0 - ((2.0 * x) * (2.0 * x)))) * 0.5 : (FastSqrt(1.0 - ((2.0 - (2.0 * x)) * (2.0 - (2.0 * x)))) + 1.0) * 0.5));
 
 
         /*  Back  ================================================================ */
