@@ -30,13 +30,13 @@ return FUnit.Run(args, describe =>
         it("should pass all easing tests (expect 30 for float and 30 for double)", () =>
         {
             var result = Easing_Test.Run();
-
-            // Each precision type has 3 variations (In, Out, InOut) of 10 easing types.
-            // Expected count is exactly 30 passes per type.
             var lines = result.Split('\n', System.StringSplitOptions.RemoveEmptyEntries);
-            var passCount = lines.Count(l => l.Contains("[Pass]"));
 
-            Must.BeEqual(60, passCount);
+            var floatPasses = lines.Count(l => l.Contains("[Pass] EasingFloat."));
+            var doublePasses = lines.Count(l => l.Contains("[Pass] EasingDouble."));
+
+            Must.BeEqual(30, floatPasses);
+            Must.BeEqual(30, doublePasses);
         });
     });
 });
