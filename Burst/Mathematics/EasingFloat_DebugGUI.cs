@@ -74,6 +74,7 @@ namespace SatorImaging.UnityFundamentals
 
         private void Awake()
         {
+            Easing_Test.Run();
             ConfigureRootComponents();
         }
 
