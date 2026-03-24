@@ -134,18 +134,13 @@ namespace SatorImaging.UnityFundamentals
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static PRECISION FastSqrt(PRECISION x)
         {
-            if (x <= 0.0f)
-            {
-                return 0.0f;
-            }
-
             PRECISION xHalf = x * 0.5f;
             INTEGER i = BitConverter.SingleToInt32Bits(x);
             i = 0x5f3700a0 - (i >> 1);
 
             PRECISION y = BitConverter.Int32BitsToSingle(i);
             y *= 1.5f - (xHalf * y * y);
-            return x * y;
+            return x <= 0.0f ? 0.0f : x * y;
         }
 
         /// <summary><c>=> 1.0f - sqrt(1.0f - x * x)</c></summary>
@@ -171,61 +166,11 @@ namespace SatorImaging.UnityFundamentals
         private const PRECISION e_c5 = 2.0f * SYSMATH.PI / 4.5f;
 
         /// <summary>Simulates spring-like oscillations.</summary>
-        public static PRECISION ElasticIn(PRECISION x)
-        {
-            if (x == 0.0f)
-            {
-                return 0.0f;
-            }
+        public static PRECISION ElasticIn(PRECISION x) => x == 0.0f ? 0.0f : (x == 1.0f ? 1.0f : -Math.exp(((10.0f * x) - 10.0f) * ln_2) * Math.sin(((10.0f * x) - 10.75f) * e_c4));
 
-            if (x == 1.0f)
-            {
-                return 1.0f;
-            }
+        public static PRECISION ElasticOut(PRECISION x) => x == 0.0f ? 0.0f : (x == 1.0f ? 1.0f : (Math.exp((-10.0f * x) * ln_2) * Math.sin(((10.0f * x) - 0.75f) * e_c4)) + 1.0f);
 
-            PRECISION t = 10.0f * x;
-            return -Math.exp((t - 10.0f) * ln_2) * Math.sin((t - 10.75f) * e_c4);
-        }
-
-        public static PRECISION ElasticOut(PRECISION x)
-        {
-            if (x == 0.0f)
-            {
-                return 0.0f;
-            }
-
-            if (x == 1.0f)
-            {
-                return 1.0f;
-            }
-
-            PRECISION t = 10.0f * x;
-            return (Math.exp((-t) * ln_2) * Math.sin((t - 0.75f) * e_c4)) + 1.0f;
-        }
-
-        public static PRECISION ElasticInOut(PRECISION x)
-        {
-            if (x == 0.0f)
-            {
-                return 0.0f;
-            }
-
-            if (x == 1.0f)
-            {
-                return 1.0f;
-            }
-
-            PRECISION t = (20.0f * x) - 10.0f;
-            PRECISION angle = (t - 1.125f) * e_c5;
-            PRECISION s = Math.sin(angle) * 0.5f;
-
-            if (x < 0.5f)
-            {
-                return -Math.exp(t * ln_2) * s;
-            }
-
-            return (Math.exp(-t * ln_2) * s) + 1.0f;
-        }
+        public static PRECISION ElasticInOut(PRECISION x) => x == 0.0f ? 0.0f : (x == 1.0f ? 1.0f : (x < 0.5f ? -Math.exp(((20.0f * x) - 10.0f) * ln_2) * Math.sin(((20.0f * x) - 11.125f) * e_c5) * 0.5f : (Math.exp((10.0f - (20.0f * x)) * ln_2) * Math.sin(((20.0f * x) - 11.125f) * e_c5) * 0.5f) + 1.0f));
 
 
         /*  Bounce  ================================================================ */
@@ -235,25 +180,10 @@ namespace SatorImaging.UnityFundamentals
         {
             const PRECISION n1 = 7.5625f;
             const PRECISION d1_inv = 1.0f / 2.75f;
-            if (x < 1.0f * d1_inv)
-            {
-                return n1 * x * x;
-            }
-            else if (x < 2.0f * d1_inv)
-            {
-                x -= 1.5f * d1_inv;
-                return (n1 * x * x) + 0.75f;
-            }
-            else if (x < 2.5f * d1_inv)
-            {
-                x -= 2.25f * d1_inv;
-                return (n1 * x * x) + 0.9375f;
-            }
-            else
-            {
-                x -= 2.625f * d1_inv;
-                return (n1 * x * x) + 0.984375f;
-            }
+            return x < 1.0f * d1_inv ? n1 * x * x :
+                   x < 2.0f * d1_inv ? (n1 * (x - (1.5f * d1_inv)) * (x - (1.5f * d1_inv))) + 0.75f :
+                   x < 2.5f * d1_inv ? (n1 * (x - (2.25f * d1_inv)) * (x - (2.25f * d1_inv))) + 0.9375f :
+                                      (n1 * (x - (2.625f * d1_inv)) * (x - (2.625f * d1_inv))) + 0.984375f;
         }
 
         /// <summary>Simulates a bouncing motion against a boundary.</summary>
