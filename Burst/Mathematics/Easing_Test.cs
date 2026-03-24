@@ -71,7 +71,7 @@ namespace SatorImaging.UnityFundamentals
                 sb.AppendLine($"[Pass] {type.Name}.{name}");
             }
 
-            return sb.ToString().Trim();
+            return sb.ToString().TrimEnd();
         }
 
         private static readonly Dictionary<string, float[]> ExpectedValues = new Dictionary<string, float[]>

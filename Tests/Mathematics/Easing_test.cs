@@ -1,6 +1,7 @@
 #:package FUnit@*
 #:package FUnit.Directives@*
 
+#if !UNITY_5_3_OR_NEWER
 namespace UnityEngine
 {
     public static class Mathf
@@ -13,6 +14,7 @@ namespace UnityEngine
         public static float Pow(float x, float y) => (float)System.Math.Pow(x, y);
     }
 }
+#endif
 
 //:funit:include ../../Burst/Mathematics/EasingFloat.cs
 //:funit:include ../../Burst/Mathematics/EasingDouble.cs
@@ -25,9 +27,12 @@ return FUnit.Run(args, describe =>
 {
     describe("Easing functions validation", it =>
     {
-        it("should pass all easing tests (expect 10 types * 3 variations * 2 precision levels = 60 passes)", () =>
+        it("should pass all easing tests (expect 30 for float and 30 for double)", () =>
         {
             var result = Easing_Test.Run();
+
+            // Each precision type has 3 variations (In, Out, InOut) of 10 easing types.
+            // Expected count is exactly 30 passes per type.
             var lines = result.Split('\n', System.StringSplitOptions.RemoveEmptyEntries);
             var passCount = lines.Count(l => l.Contains("[Pass]"));
 
