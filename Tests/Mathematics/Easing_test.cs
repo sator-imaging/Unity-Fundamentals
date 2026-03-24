@@ -1,6 +1,13 @@
 #:package FUnit@*
 #:package FUnit.Directives@*
 
+//:funit:include ../../Burst/Mathematics/EasingFloat.cs
+//:funit:include ../../Burst/Mathematics/EasingDouble.cs
+//:funit:include ../../Burst/Mathematics/Easing_Test.cs
+
+using System.Linq;
+using SatorImaging.UnityFundamentals;
+
 #if !UNITY_5_3_OR_NEWER
 namespace UnityEngine
 {
@@ -15,13 +22,6 @@ namespace UnityEngine
     }
 }
 #endif
-
-//:funit:include ../../Burst/Mathematics/EasingFloat.cs
-//:funit:include ../../Burst/Mathematics/EasingDouble.cs
-//:funit:include ../../Burst/Mathematics/Easing_Test.cs
-
-using System.Linq;
-using SatorImaging.UnityFundamentals;
 
 return FUnit.Run(args, describe =>
 {
