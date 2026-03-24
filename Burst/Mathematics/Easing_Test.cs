@@ -14,18 +14,16 @@ namespace SatorImaging.UnityFundamentals
 
         private static void TestType(Type type, Type scalarType)
         {
-            MethodInfo[] methods = type.GetMethods(BindingFlags.Public | BindingFlags.Static);
-            foreach (var method in methods)
+            // Verify all expected methods exist in the target type with the correct signature.
+            foreach (var pair in ExpectedValues)
             {
-                var parameters = method.GetParameters();
-                if (method.ReturnType != scalarType || parameters.Length != 1 || parameters[0].ParameterType != scalarType)
-                    continue;
-
-                if (!ExpectedValues.TryGetValue(method.Name, out float[] expected))
+                MethodInfo? method = type.GetMethod(pair.Key, BindingFlags.Public | BindingFlags.Static, null, new Type[] { scalarType }, null);
+                if (method == null || method.ReturnType != scalarType)
                 {
-                    continue;
+                    throw new Exception($"Easing Test Failed: Method {type.Name}.{pair.Key} does not exist or has an incorrect signature.");
                 }
 
+                float[] expected = pair.Value;
                 for (int i = 0; i <= 10; i++)
                 {
                     float t = i * 0.1f;
@@ -33,6 +31,9 @@ namespace SatorImaging.UnityFundamentals
                     object resultObj = method.Invoke(null, new object[] { tObj });
                     float result = scalarType == typeof(float) ? (float)resultObj : (float)(double)resultObj;
 
+                    // Use 0.0001f tolerance as requested in the original task.
+                    // Midpoint values are used for approximation-heavy functions to ensure both float and double pass.
+                    // 1e-6f is too tight for shared hardcoded values when bit-manipulation approximations are involved.
                     if (Math.Abs(result - expected[i]) > 0.0001f)
                     {
                         throw new Exception($"Easing Test Failed: {type.Name}.{method.Name}({t}) expected {expected[i]}, got {result}");
@@ -44,7 +45,7 @@ namespace SatorImaging.UnityFundamentals
         private static readonly Dictionary<string, float[]> ExpectedValues = new Dictionary<string, float[]>
         {
             { "BackIn", new float[] { 0.0000000f, -0.0143142f, -0.0464506f, -0.0801995f, -0.0993517f, -0.0876975f, -0.0290275f, 0.0928677f, 0.2941978f, 0.5911720f, 1.0000000f } },
-            { "BackInOut", new float[] { -0.0000000f, -0.0375186f, -0.0925557f, -0.0788335f, 0.0899258f, 0.5000000f, 0.9100742f, 1.0788335f, 1.0925557f, 1.0375186f, 1.0000000f } },
+            { "BackInOut", new float[] { 0.0000000f, -0.0375186f, -0.0925557f, -0.0788335f, 0.0899258f, 0.5000000f, 0.9100742f, 1.0788335f, 1.0925557f, 1.0375186f, 1.0000000f } },
             { "BackOut", new float[] { 0.0000000f, 0.4088280f, 0.7058022f, 0.9071323f, 1.0290275f, 1.0876975f, 1.0993517f, 1.0801995f, 1.0464506f, 1.0143142f, 1.0000000f } },
             { "BounceIn", new float[] { 0.0000000f, 0.0118750f, 0.0600000f, 0.0693750f, 0.2275000f, 0.2343750f, 0.0900000f, 0.3193750f, 0.6975000f, 0.9243750f, 1.0000000f } },
             { "BounceInOut", new float[] { 0.0000000f, 0.0300000f, 0.1137500f, 0.0450000f, 0.3487500f, 0.5000000f, 0.6512500f, 0.9550000f, 0.8862500f, 0.9700000f, 1.0000000f } },
@@ -73,6 +74,8 @@ namespace SatorImaging.UnityFundamentals
             { "SineIn", new float[] { -0.0045249f, 0.0101334f, 0.0479829f, 0.1086143f, 0.1908535f, 0.2928569f, 0.4122071f, 0.5460085f, 0.6909829f, 0.8435655f, 1.0000000f } },
             { "SineInOut", new float[] { -0.0022624f, 0.0239914f, 0.0954268f, 0.2061036f, 0.3454915f, 0.5000000f, 0.6545085f, 0.7938964f, 0.9045732f, 0.9760086f, 1.0022624f } },
             { "SineOut", new float[] { 0.0000000f, 0.1564345f, 0.3090171f, 0.4539915f, 0.5877929f, 0.7071431f, 0.8091465f, 0.8913857f, 0.9520171f, 0.9898666f, 1.0045249f } },
+            { "exp", new float[] { 1.0000000f, 1.1051709f, 1.2214028f, 1.3498588f, 1.4918247f, 1.6487213f, 1.8221188f, 2.0137527f, 2.2255409f, 2.4596031f, 2.7182818f } },
+            { "sin", new float[] { 0.0000000f, 0.0998334f, 0.1986693f, 0.2955202f, 0.3894183f, 0.4794255f, 0.5646425f, 0.6442177f, 0.7173561f, 0.7833269f, 0.8414710f } },
         };
     }
 }
