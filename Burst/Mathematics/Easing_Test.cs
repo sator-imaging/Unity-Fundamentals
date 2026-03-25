@@ -61,8 +61,9 @@ namespace SatorImaging.UnityFundamentals
                     object resultObj = method.Invoke(null, new object[] { tObj });
                     float result = scalarType == typeof(float) ? (float)resultObj : (float)(double)resultObj;
 
-                    // Relaxed tolerance for Circ functions to accommodate float vs double approximation differences.
-                    float tolerance = name.StartsWith("Circ") ? 0.0002f : 0.0001f;
+                    // Zero tolerance at boundaries as requested.
+                    // For Circ functions, relaxed tolerance to accommodate float vs double approximation differences.
+                    float tolerance = (i == 0 || i == 10) ? 0f : (name.StartsWith("Circ") ? 0.0002f : 0.0001f);
 
                     // Midpoint values ensure both float and double pass despite implementation-specific approximations (FastSqrt, Sin5).
                     if (Math.Abs(result - expected[i]) > tolerance)

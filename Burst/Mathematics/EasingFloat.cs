@@ -107,16 +107,19 @@ namespace SatorImaging.UnityFundamentals
         private static PRECISION Sin5(PRECISION t)
         {
             const PRECISION inv6 = 1.0f / 6.0f;
+
+            // Original formula: sin(t) ≈ t - t^3/6 + t^5/120
+            // Targeted formula: sin(t) ≈ t - t^3/6 + t^5/C
+            // Constant C is adjusted to fit 0..1 range as possible (targeted sin(PI/2) = 1).
             const PRECISION invC = 1.0f / 127.2236176f;
 
-            // sin(t) ≈ t - t^3f/6f + t^5f/Cf
             return t - (t * t * t * inv6) + (t * t * t * t * t * invC);
         }
 
         /// <summary>Uses approximate sine value.</summary>
-        public static PRECISION SineIn(PRECISION x) => 1.0f - Sin5((1.0f - x) * SYSMATH.PI * 0.5f);
-        public static PRECISION SineOut(PRECISION x) => Sin5(x * SYSMATH.PI * 0.5f);
-        public static PRECISION SineInOut(PRECISION x) => (1.0f - Sin5((0.5f - x) * SYSMATH.PI)) * 0.5f;
+        public static PRECISION SineIn(PRECISION x) => x == 0.0f ? 0.0f : (x == 1.0f ? 1.0f : 1.0f - Sin5((1.0f - x) * SYSMATH.PI * 0.5f));
+        public static PRECISION SineOut(PRECISION x) => x == 0.0f ? 0.0f : (x == 1.0f ? 1.0f : Sin5(x * SYSMATH.PI * 0.5f));
+        public static PRECISION SineInOut(PRECISION x) => x == 0.0f ? 0.0f : (x == 1.0f ? 1.0f : (1.0f - Sin5((0.5f - x) * SYSMATH.PI)) * 0.5f);
 
 
         /*  Expo  ================================================================ */
@@ -139,14 +142,19 @@ namespace SatorImaging.UnityFundamentals
             i = 0x5f3700a0 - (i >> 1);
 
             PRECISION y = BitConverter.Int32BitsToSingle(i);
+
+            // Original formula: y = y * (1.5 - xHalf * y * y)
+            // Targeted formula: y = y * (K - xHalf * y * y)
+            // Constant K is adjusted to fit 0..1 range as possible (targeted sqrt(1) = 1).
             y *= 1.501898050f - (xHalf * y * y);
+
             return x <= 0.0f ? 0.0f : x * y;
         }
 
         /// <summary><c>=> 1.0f - sqrt(1.0f - x * x)</c></summary>
-        public static PRECISION CircIn(PRECISION x) => 1.0f - FastSqrt(1.0f - (x * x));
-        public static PRECISION CircOut(PRECISION x) => FastSqrt(1.0f - ((x - 1.0f) * (x - 1.0f)));
-        public static PRECISION CircInOut(PRECISION x) => x < 0.5f ? (1.0f - FastSqrt(1.0f - ((2.0f * x) * (2.0f * x)))) * 0.5f : (FastSqrt(1.0f - ((2.0f - (2.0f * x)) * (2.0f - (2.0f * x)))) + 1.0f) * 0.5f;
+        public static PRECISION CircIn(PRECISION x) => x == 0.0f ? 0.0f : (x == 1.0f ? 1.0f : 1.0f - FastSqrt(1.0f - (x * x)));
+        public static PRECISION CircOut(PRECISION x) => x == 0.0f ? 0.0f : (x == 1.0f ? 1.0f : FastSqrt(1.0f - ((x - 1.0f) * (x - 1.0f))));
+        public static PRECISION CircInOut(PRECISION x) => x == 0.0f ? 0.0f : (x == 1.0f ? 1.0f : (x < 0.5f ? (1.0f - FastSqrt(1.0f - ((2.0f * x) * (2.0f * x)))) * 0.5f : (FastSqrt(1.0f - ((2.0f - (2.0f * x)) * (2.0f - (2.0f * x)))) + 1.0f) * 0.5f));
 
 
         /*  Back  ================================================================ */
