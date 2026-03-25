@@ -117,9 +117,9 @@ namespace SatorImaging.UnityFundamentals
         }
 
         /// <summary>Uses approximate sine value.</summary>
-        public static PRECISION SineIn(PRECISION x) => x == 0.0f ? 0.0f : (x == 1.0f ? 1.0f : 1.0f - Sin5((1.0f - x) * SYSMATH.PI * 0.5f));
-        public static PRECISION SineOut(PRECISION x) => x == 0.0f ? 0.0f : (x == 1.0f ? 1.0f : Sin5(x * SYSMATH.PI * 0.5f));
-        public static PRECISION SineInOut(PRECISION x) => x == 0.0f ? 0.0f : (x == 1.0f ? 1.0f : (1.0f - Sin5((0.5f - x) * SYSMATH.PI)) * 0.5f);
+        public static PRECISION SineIn(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : 1.0f - Sin5((1.0f - x) * SYSMATH.PI * 0.5f));
+        public static PRECISION SineOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : Sin5(x * SYSMATH.PI * 0.5f));
+        public static PRECISION SineInOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : (1.0f - Sin5((0.5f - x) * SYSMATH.PI)) * 0.5f);
 
 
         /*  Expo  ================================================================ */
@@ -152,9 +152,9 @@ namespace SatorImaging.UnityFundamentals
         }
 
         /// <summary><c>=> 1.0f - sqrt(1.0f - x * x)</c></summary>
-        public static PRECISION CircIn(PRECISION x) => x == 0.0f ? 0.0f : (x == 1.0f ? 1.0f : 1.0f - FastSqrt(1.0f - (x * x)));
-        public static PRECISION CircOut(PRECISION x) => x == 0.0f ? 0.0f : (x == 1.0f ? 1.0f : FastSqrt(1.0f - ((x - 1.0f) * (x - 1.0f))));
-        public static PRECISION CircInOut(PRECISION x) => x == 0.0f ? 0.0f : (x == 1.0f ? 1.0f : (x < 0.5f ? (1.0f - FastSqrt(1.0f - ((2.0f * x) * (2.0f * x)))) * 0.5f : (FastSqrt(1.0f - ((2.0f - (2.0f * x)) * (2.0f - (2.0f * x)))) + 1.0f) * 0.5f));
+        public static PRECISION CircIn(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : 1.0f - FastSqrt(1.0f - (x * x)));
+        public static PRECISION CircOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : FastSqrt(1.0f - ((x - 1.0f) * (x - 1.0f))));
+        public static PRECISION CircInOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : (x < 0.5f ? (1.0f - FastSqrt(1.0f - ((2.0f * x) * (2.0f * x)))) * 0.5f : (FastSqrt(1.0f - ((2.0f - (2.0f * x)) * (2.0f - (2.0f * x)))) + 1.0f) * 0.5f));
 
 
         /*  Back  ================================================================ */
