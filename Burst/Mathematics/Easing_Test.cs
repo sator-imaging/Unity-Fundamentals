@@ -63,7 +63,7 @@ namespace SatorImaging.UnityFundamentals
 
                     // Zero tolerance at boundaries as requested.
                     // For Circ functions, relaxed tolerance to accommodate float vs double approximation differences.
-                    float tolerance = (i == 0 || i == 10) ? 0f : (name.StartsWith("Circ") ? 0.0002f : 0.0001f);
+                    float tolerance = (i == 0 || i == 10) ? 0f : (name.StartsWith("Circ") ? 0.0002f : 0.00001f);
 
                     // Midpoint values ensure both float and double pass despite implementation-specific approximations (FastSqrt, Sin5).
                     if (Math.Abs(result - expected[i]) > tolerance)
