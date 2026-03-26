@@ -59,7 +59,6 @@ namespace SatorImaging.UnityFundamentals
                     double t = Math.Round(i * 0.1, 1);
                     object tObj = scalarType == typeof(float) ? (object)(float)t : (object)t;
                     object resultObj = method.Invoke(null, new object[] { tObj });
-                    double result = scalarType == typeof(float) ? (double)(float)resultObj : (double)resultObj;
 
                     double targetExpected = expected[i];
                     bool isApprox = name.StartsWith("Sine") || name.StartsWith("Circ");
@@ -67,23 +66,27 @@ namespace SatorImaging.UnityFundamentals
                     // Recalculate expected value for Sine/Circ using high-precision Math for comparison.
                     if (isApprox) targetExpected = GetTrueValue(name, t);
 
-                    double tolerance;
-                    if (i == 0 || i == 10)
+                    if (scalarType == typeof(float))
                     {
-                        tolerance = 1e-15;
-                    }
-                    else if (scalarType == typeof(double))
-                    {
-                        tolerance = isApprox ? 0.005 : 1e-12;
-                    }
-                    else // float
-                    {
-                        tolerance = isApprox ? 0.005 : 0.0002;
-                    }
+                        float result = (float)resultObj;
+                        float expectedF = (float)targetExpected;
+                        float tolerance = (i == 0 || i == 10) ? 0f : (isApprox ? 0.005f : 0.0002f);
 
-                    if (Math.Abs(result - targetExpected) > tolerance)
+                        if (Math.Abs(result - expectedF) > tolerance)
+                        {
+                            throw new Exception($"Easing Test Failed: {type.Name}.{name}({t}) expected {expectedF}, got {result} (diff: {Math.Abs(result - expectedF)}, tolerance: {tolerance})");
+                        }
+                    }
+                    else // double
                     {
-                        throw new Exception($"Easing Test Failed: {type.Name}.{name}({t}) expected {targetExpected}, got {result} (diff: {Math.Abs(result - targetExpected)}, tolerance: {tolerance})");
+                        double result = (double)resultObj;
+                        double expectedD = targetExpected;
+                        double tolerance = (i == 0 || i == 10) ? 1e-15 : (isApprox ? 0.005 : 1e-12);
+
+                        if (Math.Abs(result - expectedD) > tolerance)
+                        {
+                            throw new Exception($"Easing Test Failed: {type.Name}.{name}({t}) expected {expectedD}, got {result} (diff: {Math.Abs(result - expectedD)}, tolerance: {tolerance})");
+                        }
                     }
                 }
                 sb.AppendLine($"[Pass] {type.Name}.{name}");
