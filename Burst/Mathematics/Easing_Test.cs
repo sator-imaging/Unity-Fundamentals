@@ -78,7 +78,7 @@ namespace SatorImaging.UnityFundamentals
                     {
                         double result = (double)resultObj;
                         double expectedD = targetExpected;
-                        double tolerance = (i == 0 || i == 10) ? 1e-15 : (isApprox ? 0.005 : 1e-12);
+                        double tolerance = (i == 0 || i == 10) ? 0.0 : (isApprox ? 0.005 : 1e-12);
 
                         if (Math.Abs(result - expectedD) > tolerance)
                         {

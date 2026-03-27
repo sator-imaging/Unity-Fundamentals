@@ -66,33 +66,33 @@ namespace SatorImaging.UnityFundamentals
         /*  Quad  ================================================================ */
 
         /// <summary><c>=> pow(x, 2)</c></summary>
-        public static PRECISION QuadIn(PRECISION x) => x * x;
-        public static PRECISION QuadOut(PRECISION x) => 1.0 - ((1.0 - x) * (1.0 - x));
-        public static PRECISION QuadInOut(PRECISION x) => x < 0.5 ? 2.0 * x * x : 1.0 - (((-2.0 * x) + 2.0) * ((-2.0 * x) + 2.0) * 0.5);
+        public static PRECISION QuadIn(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : x * x);
+        public static PRECISION QuadOut(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : 1.0 - ((1.0 - x) * (1.0 - x)));
+        public static PRECISION QuadInOut(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : (x < 0.5 ? 2.0 * x * x : 1.0 - (((-2.0 * x) + 2.0) * ((-2.0 * x) + 2.0) * 0.5)));
 
 
         /*  Cubic  ================================================================ */
 
         /// <summary><c>=> pow(x, 3)</c></summary>
-        public static PRECISION CubicIn(PRECISION x) => x * x * x;
-        public static PRECISION CubicOut(PRECISION x) => 1.0 - ((1.0 - x) * (1.0 - x) * (1.0 - x));
-        public static PRECISION CubicInOut(PRECISION x) => x < 0.5 ? 4.0 * x * x * x : 1.0 - (((-2.0 * x) + 2.0) * ((-2.0 * x) + 2.0) * ((-2.0 * x) + 2.0) * 0.5);
+        public static PRECISION CubicIn(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : x * x * x);
+        public static PRECISION CubicOut(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : 1.0 - ((1.0 - x) * (1.0 - x) * (1.0 - x)));
+        public static PRECISION CubicInOut(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : (x < 0.5 ? 4.0 * x * x * x : 1.0 - (((-2.0 * x) + 2.0) * ((-2.0 * x) + 2.0) * ((-2.0 * x) + 2.0) * 0.5)));
 
 
         /*  Quart  ================================================================ */
 
         /// <summary><c>=> pow(x, 4)</c></summary>
-        public static PRECISION QuartIn(PRECISION x) => x * x * x * x;
-        public static PRECISION QuartOut(PRECISION x) => 1.0 - ((1.0 - x) * (1.0 - x) * (1.0 - x) * (1.0 - x));
-        public static PRECISION QuartInOut(PRECISION x) => x < 0.5 ? 8.0 * x * x * x * x : 1.0 - (((-2.0 * x) + 2.0) * ((-2.0 * x) + 2.0) * ((-2.0 * x) + 2.0) * ((-2.0 * x) + 2.0) * 0.5);
+        public static PRECISION QuartIn(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : x * x * x * x);
+        public static PRECISION QuartOut(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : 1.0 - ((1.0 - x) * (1.0 - x) * (1.0 - x) * (1.0 - x)));
+        public static PRECISION QuartInOut(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : (x < 0.5 ? 8.0 * x * x * x * x : 1.0 - (((-2.0 * x) + 2.0) * ((-2.0 * x) + 2.0) * ((-2.0 * x) + 2.0) * ((-2.0 * x) + 2.0) * 0.5)));
 
 
         /*  Quint  ================================================================ */
 
         /// <summary><c>=> pow(x, 5)</c></summary>
-        public static PRECISION QuintIn(PRECISION x) => x * x * x * x * x;
-        public static PRECISION QuintOut(PRECISION x) => 1.0 - ((1.0 - x) * (1.0 - x) * (1.0 - x) * (1.0 - x) * (1.0 - x));
-        public static PRECISION QuintInOut(PRECISION x) => x < 0.5 ? 16.0 * x * x * x * x * x : 1.0 - (((-2.0 * x) + 2.0) * ((-2.0 * x) + 2.0) * ((-2.0 * x) + 2.0) * ((-2.0 * x) + 2.0) * ((-2.0 * x) + 2.0) * 0.5);
+        public static PRECISION QuintIn(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : x * x * x * x * x);
+        public static PRECISION QuintOut(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : 1.0 - ((1.0 - x) * (1.0 - x) * (1.0 - x) * (1.0 - x) * (1.0 - x)));
+        public static PRECISION QuintInOut(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : (x < 0.5 ? 16.0 * x * x * x * x * x : 1.0 - (((-2.0 * x) + 2.0) * ((-2.0 * x) + 2.0) * ((-2.0 * x) + 2.0) * ((-2.0 * x) + 2.0) * ((-2.0 * x) + 2.0) * 0.5)));
 
 
         /*  Sine  ================================================================ */
@@ -112,9 +112,9 @@ namespace SatorImaging.UnityFundamentals
         }
 
         /// <summary>Uses approximate sine value.</summary>
-        public static PRECISION SineIn(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : 1.0 - Sin5((1.0 - x) * SYSMATH.PI * 0.5));
-        public static PRECISION SineOut(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : Sin5(x * SYSMATH.PI * 0.5));
-        public static PRECISION SineInOut(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : (1.0 - Sin5((0.5 - x) * SYSMATH.PI)) * 0.5);
+        public static PRECISION SineIn(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : 1.0 - Sin5((1.0 - x) * SYSMATH.PI * 0.5)); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
+        public static PRECISION SineOut(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : Sin5(x * SYSMATH.PI * 0.5)); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
+        public static PRECISION SineInOut(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : (1.0 - Sin5((0.5 - x) * SYSMATH.PI)) * 0.5); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
 
         /*  Expo  ================================================================ */
@@ -122,9 +122,9 @@ namespace SatorImaging.UnityFundamentals
         private const PRECISION ln_2 = 0.6931471805599453;
 
         /// <summary><c>=> pow(2.0, 10.0 * x - 10.0)</c></summary>
-        public static PRECISION ExpoIn(PRECISION x) => x == 0.0 ? 0.0 : Math.exp(((10.0 * x) - 10.0) * ln_2);
-        public static PRECISION ExpoOut(PRECISION x) => x == 1.0 ? 1.0 : 1.0 - Math.exp((-10.0 * x) * ln_2);
-        public static PRECISION ExpoInOut(PRECISION x) => x == 0.0 ? 0.0 : (x == 1.0 ? 1.0 : (x < 0.5 ? Math.exp(((20.0 * x) - 10.0) * ln_2) * 0.5 : (2.0 - Math.exp((10.0 - (20.0 * x)) * ln_2)) * 0.5));
+        public static PRECISION ExpoIn(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : Math.exp(((10.0 * x) - 10.0) * ln_2)); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
+        public static PRECISION ExpoOut(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : 1.0 - Math.exp((-10.0 * x) * ln_2)); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
+        public static PRECISION ExpoInOut(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : (x < 0.5 ? Math.exp(((20.0 * x) - 10.0) * ln_2) * 0.5 : (2.0 - Math.exp((10.0 - (20.0 * x)) * ln_2)) * 0.5)); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
 
         /*  Circ  ================================================================ */
@@ -147,9 +147,9 @@ namespace SatorImaging.UnityFundamentals
         }
 
         /// <summary><c>=> 1.0 - sqrt(1.0 - x * x)</c></summary>
-        public static PRECISION CircIn(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : 1.0 - FastSqrt(1.0 - (x * x)));
-        public static PRECISION CircOut(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : FastSqrt(1.0 - ((x - 1.0) * (x - 1.0))));
-        public static PRECISION CircInOut(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : (x < 0.5 ? (1.0 - FastSqrt(1.0 - ((2.0 * x) * (2.0 * x)))) * 0.5 : (FastSqrt(1.0 - ((2.0 - (2.0 * x)) * (2.0 - (2.0 * x)))) + 1.0) * 0.5));
+        public static PRECISION CircIn(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : 1.0 - FastSqrt(1.0 - (x * x))); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
+        public static PRECISION CircOut(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : FastSqrt(1.0 - ((x - 1.0) * (x - 1.0)))); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
+        public static PRECISION CircInOut(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : (x < 0.5 ? (1.0 - FastSqrt(1.0 - ((2.0 * x) * (2.0 * x)))) * 0.5 : (FastSqrt(1.0 - ((2.0 - (2.0 * x)) * (2.0 - (2.0 * x)))) + 1.0) * 0.5)); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
 
         /*  Back  ================================================================ */
@@ -158,9 +158,9 @@ namespace SatorImaging.UnityFundamentals
         private const PRECISION c2 = c1 * 1.525;
 
         /// <summary>Overshoots the range once and returns.</summary>
-        public static PRECISION BackIn(PRECISION x) => ((c1 + 1.0) * x * x * x) - (c1 * x * x);
-        public static PRECISION BackOut(PRECISION x) => 1.0 + ((c1 + 1.0) * (x - 1.0) * (x - 1.0) * (x - 1.0)) + (c1 * (x - 1.0) * (x - 1.0));
-        public static PRECISION BackInOut(PRECISION x) => x < 0.5 ? ((2.0 * x) * (2.0 * x) * (((c2 + 1.0) * (2.0 * x)) - c2)) * 0.5 : (((2.0 * x - 2.0) * (2.0 * x - 2.0) * (((c2 + 1.0) * (2.0 * x - 2.0)) + c2)) + 2.0) * 0.5;
+        public static PRECISION BackIn(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : ((c1 + 1.0) * x * x * x) - (c1 * x * x)); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
+        public static PRECISION BackOut(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : 1.0 + ((c1 + 1.0) * (x - 1.0) * (x - 1.0) * (x - 1.0)) + (c1 * (x - 1.0) * (x - 1.0))); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
+        public static PRECISION BackInOut(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : (x < 0.5 ? ((2.0 * x) * (2.0 * x) * (((c2 + 1.0) * (2.0 * x)) - c2)) * 0.5 : (((2.0 * x - 2.0) * (2.0 * x - 2.0) * (((c2 + 1.0) * (2.0 * x - 2.0)) + c2)) + 2.0) * 0.5)); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
 
         /*  Elastic  ================================================================ */
@@ -169,11 +169,11 @@ namespace SatorImaging.UnityFundamentals
         private const PRECISION e_c5 = 2.0 * SYSMATH.PI / 4.5;
 
         /// <summary>Simulates spring-like oscillations.</summary>
-        public static PRECISION ElasticIn(PRECISION x) => x == 0.0 ? 0.0 : (x == 1.0 ? 1.0 : -Math.exp(((10.0 * x) - 10.0) * ln_2) * Math.sin(((10.0 * x) - 10.75) * e_c4));
+        public static PRECISION ElasticIn(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : -Math.exp(((10.0 * x) - 10.0) * ln_2) * Math.sin(((10.0 * x) - 10.75) * e_c4)); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
-        public static PRECISION ElasticOut(PRECISION x) => x == 0.0 ? 0.0 : (x == 1.0 ? 1.0 : (Math.exp((-10.0 * x) * ln_2) * Math.sin(((10.0 * x) - 0.75) * e_c4)) + 1.0);
+        public static PRECISION ElasticOut(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : (Math.exp((-10.0 * x) * ln_2) * Math.sin(((10.0 * x) - 0.75) * e_c4)) + 1.0); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
-        public static PRECISION ElasticInOut(PRECISION x) => x == 0.0 ? 0.0 : (x == 1.0 ? 1.0 : (x < 0.5 ? -Math.exp(((20.0 * x) - 10.0) * ln_2) * Math.sin(((20.0 * x) - 11.125) * e_c5) * 0.5 : (Math.exp((10.0 - (20.0 * x)) * ln_2) * Math.sin(((20.0 * x) - 11.125) * e_c5) * 0.5) + 1.0));
+        public static PRECISION ElasticInOut(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : (x < 0.5 ? -Math.exp(((20.0 * x) - 10.0) * ln_2) * Math.sin(((20.0 * x) - 11.125) * e_c5) * 0.5 : (Math.exp((10.0 - (20.0 * x)) * ln_2) * Math.sin(((20.0 * x) - 11.125) * e_c5) * 0.5) + 1.0)); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
 
         /*  Bounce  ================================================================ */
@@ -190,12 +190,8 @@ namespace SatorImaging.UnityFundamentals
         }
 
         /// <summary>Simulates a bouncing motion against a boundary.</summary>
-        public static PRECISION BounceIn(PRECISION x) => 1.0 - BounceOut_Impl(1.0 - x);
-        public static PRECISION BounceOut(PRECISION x) => BounceOut_Impl(x);
-        public static PRECISION BounceInOut(PRECISION x)
-        {
-            PRECISION t = 2.0 * x;
-            return x < 0.5 ? (1.0 - BounceOut_Impl(1.0 - t)) * 0.5 : (1.0 + BounceOut_Impl(t - 1.0)) * 0.5;
-        }
+        public static PRECISION BounceIn(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : 1.0 - BounceOut_Impl(1.0 - x)); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
+        public static PRECISION BounceOut(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : BounceOut_Impl(x)); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
+        public static PRECISION BounceInOut(PRECISION x) => x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : (x < 0.5 ? (1.0 - BounceOut_Impl(1.0 - (2.0 * x))) * 0.5 : (1.0 + BounceOut_Impl((2.0 * x) - 1.0)) * 0.5)); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
     }
 }
