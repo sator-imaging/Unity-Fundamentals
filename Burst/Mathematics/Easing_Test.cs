@@ -63,9 +63,6 @@ namespace SatorImaging.UnityFundamentals
                     double targetExpected = expected[i];
                     bool isApprox = name.StartsWith("Sine") || name.StartsWith("Circ");
 
-                    // Recalculate expected value for Sine/Circ using high-precision Math for comparison.
-                    if (isApprox) targetExpected = GetTrueValue(name, t);
-
                     if (scalarType == typeof(float))
                     {
                         float result = (float)resultObj;
@@ -93,21 +90,6 @@ namespace SatorImaging.UnityFundamentals
             }
 
             return sb.ToString().Trim();
-        }
-
-        private static double GetTrueValue(string name, double x)
-        {
-            const double PI = Math.PI;
-            switch (name)
-            {
-                case "SineIn": return x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : 1.0 - Math.Cos(x * PI * 0.5));
-                case "SineOut": return x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : Math.Sin(x * PI * 0.5));
-                case "SineInOut": return x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : (1.0 - Math.Cos(x * PI)) * 0.5);
-                case "CircIn": return x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : 1.0 - Math.Sqrt(1.0 - (x * x)));
-                case "CircOut": return x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : Math.Sqrt(1.0 - ((x - 1.0) * (x - 1.0))));
-                case "CircInOut": return x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : (x < 0.5 ? (1.0 - Math.Sqrt(1.0 - ((2.0 * x) * (2.0 * x)))) * 0.5 : (Math.Sqrt(1.0 - ((2.0 - (2.0 * x)) * (2.0 - (2.0 * x)))) + 1.0) * 0.5));
-                default: return 0;
-            }
         }
 
         private static readonly Dictionary<string, double[]> ExpectedValues = new Dictionary<string, double[]>
