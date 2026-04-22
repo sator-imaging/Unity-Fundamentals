@@ -7,7 +7,6 @@
 //   float t = (elapsedTime += Time.deltaTime) * invDuration;
 //   Math.LerpUnclamped(from, to, easing(x));
 
-
 // How to Convert from EasingDouble:
 // - Regex to replace number literals
 //   - (?<![\w.])(\d+(?:\.\d+)?)(?![\w.]*f)
@@ -17,12 +16,9 @@
 //   - Magic number is different --> 0x5f3700a0
 //   --> https://qiita.com/metaphysical_bard/items/e04378b16d6173127435
 
-
-
 /// DEBUG
 //#undef STMG_UNITYMATH_EXISTS
 //#undef STMG_BURST_EXISTS
-
 
 /// PRECISION SETTINGS
 #define __burst_float
@@ -30,8 +26,6 @@
 using PRECISION = System.Single;
 using INTEGER = System.Int32;
 using SYSMATH = UnityEngine.Mathf;
-
-
 
 #if STMG_BURST_EXISTS
 using Unity.Burst;
@@ -69,36 +63,44 @@ namespace SatorImaging.UnityFundamentals
     public struct EasingFloat
     {
         /*  Quad  ================================================================ */
+        /// <summary>Quadratic easing (Entering).</summary>
+        public static PRECISION QuadIn(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : x * x); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
-        /// <summary><c>=> pow(x, 2f)</c></summary>
-        public static PRECISION QuadIn(PRECISION x) => x * x;
-        public static PRECISION QuadOut(PRECISION x) => 1.0f - ((1.0f - x) * (1.0f - x));
-        public static PRECISION QuadInOut(PRECISION x) => x < 0.5f ? 2.0f * x * x : 1.0f - (((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * 0.5f);
+        /// <summary>Quadratic easing (Exiting).</summary>
+        public static PRECISION QuadOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : 1.0f - ((1.0f - x) * (1.0f - x))); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
+        /// <summary>Quadratic easing (Entering and Exiting).</summary>
+        public static PRECISION QuadInOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : x < 0.5f ? 2.0f * x * x : 1.0f - (((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * 0.5f)); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
         /*  Cubic  ================================================================ */
+        /// <summary>Cubic easing (Entering).</summary>
+        public static PRECISION CubicIn(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : x * x * x); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
-        /// <summary><c>=> pow(x, 3f)</c></summary>
-        public static PRECISION CubicIn(PRECISION x) => x * x * x;
-        public static PRECISION CubicOut(PRECISION x) => 1.0f - ((1.0f - x) * (1.0f - x) * (1.0f - x));
-        public static PRECISION CubicInOut(PRECISION x) => x < 0.5f ? 4.0f * x * x * x : 1.0f - (((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * 0.5f);
+        /// <summary>Cubic easing (Exiting).</summary>
+        public static PRECISION CubicOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : 1.0f - ((1.0f - x) * (1.0f - x) * (1.0f - x))); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
+        /// <summary>Cubic easing (Entering and Exiting).</summary>
+        public static PRECISION CubicInOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : x < 0.5f ? 4.0f * x * x * x : 1.0f - (((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * 0.5f)); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
         /*  Quart  ================================================================ */
+        /// <summary>Quartic easing (Entering).</summary>
+        public static PRECISION QuartIn(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : x * x * x * x); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
-        /// <summary><c>=> pow(x, 4f)</c></summary>
-        public static PRECISION QuartIn(PRECISION x) => x * x * x * x;
-        public static PRECISION QuartOut(PRECISION x) => 1.0f - ((1.0f - x) * (1.0f - x) * (1.0f - x) * (1.0f - x));
-        public static PRECISION QuartInOut(PRECISION x) => x < 0.5f ? 8.0f * x * x * x * x : 1.0f - (((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * 0.5f);
+        /// <summary>Quartic easing (Exiting).</summary>
+        public static PRECISION QuartOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : 1.0f - ((1.0f - x) * (1.0f - x) * (1.0f - x) * (1.0f - x))); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
+        /// <summary>Quartic easing (Entering and Exiting).</summary>
+        public static PRECISION QuartInOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : x < 0.5f ? 8.0f * x * x * x * x : 1.0f - (((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * 0.5f)); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
         /*  Quint  ================================================================ */
+        /// <summary>Quintic easing (Entering).</summary>
+        public static PRECISION QuintIn(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : x * x * x * x * x); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
-        /// <summary><c>=> pow(x, 5f)</c></summary>
-        public static PRECISION QuintIn(PRECISION x) => x * x * x * x * x;
-        public static PRECISION QuintOut(PRECISION x) => 1.0f - ((1.0f - x) * (1.0f - x) * (1.0f - x) * (1.0f - x) * (1.0f - x));
-        public static PRECISION QuintInOut(PRECISION x) => x < 0.5f ? 16.0f * x * x * x * x * x : 1.0f - (((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * 0.5f);
+        /// <summary>Quintic easing (Exiting).</summary>
+        public static PRECISION QuintOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : 1.0f - ((1.0f - x) * (1.0f - x) * (1.0f - x) * (1.0f - x) * (1.0f - x))); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
+        /// <summary>Quintic easing (Entering and Exiting).</summary>
+        public static PRECISION QuintInOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : x < 0.5f ? 16.0f * x * x * x * x * x : 1.0f - (((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * ((-2.0f * x) + 2.0f) * 0.5f)); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
         /*  Sine  ================================================================ */
 
@@ -116,21 +118,27 @@ namespace SatorImaging.UnityFundamentals
             return t - (t * t * t * inv6) + (t * t * t * t * t * invC);
         }
 
-        /// <summary>Uses approximate sine value.</summary>
-        public static PRECISION SineIn(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : 1.0f - Sin5((1.0f - x) * SYSMATH.PI * 0.5f));
-        public static PRECISION SineOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : Sin5(x * SYSMATH.PI * 0.5f));
-        public static PRECISION SineInOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : (1.0f - Sin5((0.5f - x) * SYSMATH.PI)) * 0.5f);
+        /// <summary>Sinusoidal easing (Entering).</summary>
+        public static PRECISION SineIn(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : 1.0f - Sin5((1.0f - x) * SYSMATH.PI * 0.5f)); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
+        /// <summary>Sinusoidal easing (Exiting).</summary>
+        public static PRECISION SineOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : Sin5(x * SYSMATH.PI * 0.5f)); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
+
+        /// <summary>Sinusoidal easing (Entering and Exiting).</summary>
+        public static PRECISION SineInOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : (1.0f - Sin5((0.5f - x) * SYSMATH.PI)) * 0.5f); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
         /*  Expo  ================================================================ */
 
         private const PRECISION ln_2 = 0.6931471805599453f;
 
-        /// <summary><c>=> pow(2.0f, 10.0f * x - 10.0f)</c></summary>
-        public static PRECISION ExpoIn(PRECISION x) => x == 0.0f ? 0.0f : Math.exp(((10.0f * x) - 10.0f) * ln_2);
-        public static PRECISION ExpoOut(PRECISION x) => x == 1.0f ? 1.0f : 1.0f - Math.exp((-10.0f * x) * ln_2);
-        public static PRECISION ExpoInOut(PRECISION x) => x == 0.0f ? 0.0f : (x == 1.0f ? 1.0f : (x < 0.5f ? Math.exp(((20.0f * x) - 10.0f) * ln_2) * 0.5f : (2.0f - Math.exp((10.0f - (20.0f * x)) * ln_2)) * 0.5f));
+        /// <summary>Exponential easing (Entering).</summary>
+        public static PRECISION ExpoIn(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : Math.exp(((10.0f * x) - 10.0f) * ln_2)); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
+        /// <summary>Exponential easing (Exiting).</summary>
+        public static PRECISION ExpoOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : 1.0f - Math.exp((-10.0f * x) * ln_2)); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
+
+        /// <summary>Exponential easing (Entering and Exiting).</summary>
+        public static PRECISION ExpoInOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : x < 0.5f ? Math.exp(((20.0f * x) - 10.0f) * ln_2) * 0.5f : (2.0f - Math.exp((10.0f - (20.0f * x)) * ln_2)) * 0.5f); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
         /*  Circ  ================================================================ */
 
@@ -151,35 +159,42 @@ namespace SatorImaging.UnityFundamentals
             return x <= 0.0f ? 0.0f : x * y;
         }
 
-        /// <summary><c>=> 1.0f - sqrt(1.0f - x * x)</c></summary>
-        public static PRECISION CircIn(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : 1.0f - FastSqrt(1.0f - (x * x)));
-        public static PRECISION CircOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : FastSqrt(1.0f - ((x - 1.0f) * (x - 1.0f))));
-        public static PRECISION CircInOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : (x < 0.5f ? (1.0f - FastSqrt(1.0f - ((2.0f * x) * (2.0f * x)))) * 0.5f : (FastSqrt(1.0f - ((2.0f - (2.0f * x)) * (2.0f - (2.0f * x)))) + 1.0f) * 0.5f));
+        /// <summary>Circular easing (Entering).</summary>
+        public static PRECISION CircIn(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : 1.0f - FastSqrt(1.0f - (x * x))); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
+        /// <summary>Circular easing (Exiting).</summary>
+        public static PRECISION CircOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : FastSqrt(1.0f - ((x - 1.0f) * (x - 1.0f)))); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
+
+        /// <summary>Circular easing (Entering and Exiting).</summary>
+        public static PRECISION CircInOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : x < 0.5f ? (1.0f - FastSqrt(1.0f - ((2.0f * x) * (2.0f * x)))) * 0.5f : (FastSqrt(1.0f - ((2.0f - (2.0f * x)) * (2.0f - (2.0f * x)))) + 1.0f) * 0.5f); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
         /*  Back  ================================================================ */
 
         private const PRECISION c1 = 1.70158f;
         private const PRECISION c2 = c1 * 1.525f;
 
-        /// <summary>Overshoots the range once and returns.</summary>
-        public static PRECISION BackIn(PRECISION x) => ((c1 + 1.0f) * x * x * x) - (c1 * x * x);
-        public static PRECISION BackOut(PRECISION x) => 1.0f + ((c1 + 1.0f) * (x - 1.0f) * (x - 1.0f) * (x - 1.0f)) + (c1 * (x - 1.0f) * (x - 1.0f));
-        public static PRECISION BackInOut(PRECISION x) => x < 0.5f ? ((2.0f * x) * (2.0f * x) * (((c2 + 1.0f) * (2.0f * x)) - c2)) * 0.5f : (((2.0f * x - 2.0f) * (2.0f * x - 2.0f) * (((c2 + 1.0f) * (2.0f * x - 2.0f)) + c2)) + 2.0f) * 0.5f;
+        /// <summary>Back easing (overshooting) (Entering).</summary>
+        public static PRECISION BackIn(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : ((c1 + 1.0f) * x * x * x) - (c1 * x * x)); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
+        /// <summary>Back easing (overshooting) (Exiting).</summary>
+        public static PRECISION BackOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : 1.0f + ((c1 + 1.0f) * (x - 1.0f) * (x - 1.0f) * (x - 1.0f)) + (c1 * (x - 1.0f) * (x - 1.0f))); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
+
+        /// <summary>Back easing (overshooting) (Entering and Exiting).</summary>
+        public static PRECISION BackInOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : x < 0.5f ? ((2.0f * x) * (2.0f * x) * (((c2 + 1.0f) * (2.0f * x)) - c2)) * 0.5f : (((2.0f * x - 2.0f) * (2.0f * x - 2.0f) * (((c2 + 1.0f) * (2.0f * x - 2.0f)) + c2)) + 2.0f) * 0.5f); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
         /*  Elastic  ================================================================ */
 
         private const PRECISION e_c4 = 2.0f * SYSMATH.PI / 3.0f;
         private const PRECISION e_c5 = 2.0f * SYSMATH.PI / 4.5f;
 
-        /// <summary>Simulates spring-like oscillations.</summary>
-        public static PRECISION ElasticIn(PRECISION x) => x == 0.0f ? 0.0f : (x == 1.0f ? 1.0f : -Math.exp(((10.0f * x) - 10.0f) * ln_2) * Math.sin(((10.0f * x) - 10.75f) * e_c4));
+        /// <summary>Elastic easing (oscillating spring) (Entering).</summary>
+        public static PRECISION ElasticIn(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : -Math.exp(((10.0f * x) - 10.0f) * ln_2) * Math.sin(((10.0f * x) - 10.75f) * e_c4)); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
-        public static PRECISION ElasticOut(PRECISION x) => x == 0.0f ? 0.0f : (x == 1.0f ? 1.0f : (Math.exp((-10.0f * x) * ln_2) * Math.sin(((10.0f * x) - 0.75f) * e_c4)) + 1.0f);
+        /// <summary>Elastic easing (oscillating spring) (Exiting).</summary>
+        public static PRECISION ElasticOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : (Math.exp((-10.0f * x) * ln_2) * Math.sin(((10.0f * x) - 0.75f) * e_c4)) + 1.0f); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
-        public static PRECISION ElasticInOut(PRECISION x) => x == 0.0f ? 0.0f : (x == 1.0f ? 1.0f : (x < 0.5f ? -Math.exp(((20.0f * x) - 10.0f) * ln_2) * Math.sin(((20.0f * x) - 11.125f) * e_c5) * 0.5f : (Math.exp((10.0f - (20.0f * x)) * ln_2) * Math.sin(((20.0f * x) - 11.125f) * e_c5) * 0.5f) + 1.0f));
-
+        /// <summary>Elastic easing (oscillating spring) (Entering and Exiting).</summary>
+        public static PRECISION ElasticInOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : x < 0.5f ? -Math.exp(((20.0f * x) - 10.0f) * ln_2) * Math.sin(((20.0f * x) - 11.125f) * e_c5) * 0.5f : (Math.exp((10.0f - (20.0f * x)) * ln_2) * Math.sin(((20.0f * x) - 11.125f) * e_c5) * 0.5f) + 1.0f); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
 
         /*  Bounce  ================================================================ */
 
@@ -194,13 +209,13 @@ namespace SatorImaging.UnityFundamentals
                                       (n1 * (x - (2.625f * d1_inv)) * (x - (2.625f * d1_inv))) + 0.984375f;
         }
 
-        /// <summary>Simulates a bouncing motion against a boundary.</summary>
-        public static PRECISION BounceIn(PRECISION x) => 1.0f - BounceOut_Impl(1.0f - x);
-        public static PRECISION BounceOut(PRECISION x) => BounceOut_Impl(x);
-        public static PRECISION BounceInOut(PRECISION x)
-        {
-            PRECISION t = 2.0f * x;
-            return x < 0.5f ? (1.0f - BounceOut_Impl(1.0f - t)) * 0.5f : (1.0f + BounceOut_Impl(t - 1.0f)) * 0.5f;
-        }
+        /// <summary>Bounce easing (simulated gravity/collision) (Entering).</summary>
+        public static PRECISION BounceIn(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : 1.0f - BounceOut_Impl(1.0f - x)); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
+
+        /// <summary>Bounce easing (simulated gravity/collision) (Exiting).</summary>
+        public static PRECISION BounceOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : BounceOut_Impl(x)); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
+
+        /// <summary>Bounce easing (simulated gravity/collision) (Entering and Exiting).</summary>
+        public static PRECISION BounceInOut(PRECISION x) => x <= 0.0f ? 0.0f : (x >= 1.0f ? 1.0f : x < 0.5f ? (1.0f - BounceOut_Impl(1.0f - (2.0f * x))) * 0.5f : (1.0f + BounceOut_Impl((2.0f * x) - 1.0f)) * 0.5f); // (x == 0 ? 0 : (x == 1 ? 1 : ...))
     }
 }
