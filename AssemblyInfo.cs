@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 
 //[assembly: Preserve]
 //[assembly: InternalsVisibleTo("SatorImaging.Tests.UnityFundamentals")]
+[assembly: InternalsVisibleTo("ExpectedValueGenerator")]
 
 
 /* =====  SPECIAL ACCESSIBILITY  ===== */
