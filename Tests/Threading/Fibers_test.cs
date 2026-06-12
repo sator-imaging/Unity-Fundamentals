@@ -882,9 +882,12 @@ return FUnit.Run(args, describe =>
         it("should stop processing tasks when error handler returns \"Stop\"", async () =>
         {
             var processed = new List<int>();
+            const int failureIndex = 2;
+            const int concurrency = 2;
+
             Func<int, Task<int>> factory = async (index) =>
             {
-                if (index == 2)
+                if (index == failureIndex)
                 {
                     throw new NotSupportedException("Test error - stop");
                 }
@@ -893,7 +896,7 @@ return FUnit.Run(args, describe =>
                 return await Task.FromResult(index);
             };
 
-            var fibers = Fibers.For(2, 0, 10, 1, factory);
+            var fibers = Fibers.For(concurrency, 0, 10, 1, factory);
 
             Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
@@ -914,8 +917,9 @@ return FUnit.Run(args, describe =>
 
             // Expect tasks before the error to be processed, and no tasks after
             // NOTE: with concurrency 2, index 3 might be started before index 2 fails.
-            Must.BeTrue(!processed.Contains(2));
-            Must.BeTrue(processed.Count < 10);
+            Must.BeTrue(!processed.Contains(failureIndex));
+            Must.BeTrue(processed.Count <= failureIndex + concurrency);
+            Must.BeTrue(processed.All(i => i < failureIndex + concurrency));
             Must.BeTrue(fibers.IsCompleted);
             Must.BeTrue(fibers.IsFailed);
             Must.BeTrue(!fibers.IsRunning);
@@ -964,9 +968,12 @@ return FUnit.Run(args, describe =>
         it("should re-throw error and mark fibers as failed when error handler returns \"Default\"", async () =>
         {
             var processed = new List<int>();
+            const int failureIndex = 2;
+            const int concurrency = 2;
+
             Func<int, Task<int>> factory = async (index) =>
             {
-                if (index == 2)
+                if (index == failureIndex)
                 {
                     throw new NotSupportedException("Test error - default");
                 }
@@ -975,7 +982,7 @@ return FUnit.Run(args, describe =>
                 return await Task.FromResult(index);
             };
 
-            var fibers = Fibers.For(2, 0, 10, 1, factory);
+            var fibers = Fibers.For(concurrency, 0, 10, 1, factory);
 
             Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
@@ -998,8 +1005,9 @@ return FUnit.Run(args, describe =>
             });
 
             // Expect tasks before the error to be processed
-            Must.BeTrue(!processed.Contains(2));
-            Must.BeTrue(processed.Count < 10);
+            Must.BeTrue(!processed.Contains(failureIndex));
+            Must.BeTrue(processed.Count <= failureIndex + concurrency);
+            Must.BeTrue(processed.All(i => i < failureIndex + concurrency));
             Must.BeTrue(fibers.IsCompleted); // Fibers should be completed even if failed
             Must.BeTrue(fibers.IsFailed); // Fibers should be marked as failed
             Must.BeTrue(!fibers.IsRunning); // Should not be started after error
