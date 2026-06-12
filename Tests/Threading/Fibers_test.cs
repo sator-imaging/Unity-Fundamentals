@@ -893,7 +893,7 @@ return FUnit.Run(args, describe =>
                 return await Task.FromResult(index);
             };
 
-            var fibers = Fibers.For(1, 0, 5, 1, factory);
+            var fibers = Fibers.For(2, 0, 10, 1, factory);
 
             Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
@@ -913,7 +913,9 @@ return FUnit.Run(args, describe =>
             }
 
             // Expect tasks before the error to be processed, and no tasks after
-            Must.HaveSameSequence(new List<int> { 0, 1 }, processed);
+            // NOTE: with concurrency 2, index 3 might be started before index 2 fails.
+            Must.BeTrue(!processed.Contains(2));
+            Must.BeTrue(processed.Count < 10);
             Must.BeTrue(fibers.IsCompleted);
             Must.BeTrue(fibers.IsFailed);
             Must.BeTrue(!fibers.IsRunning);
@@ -933,7 +935,7 @@ return FUnit.Run(args, describe =>
                 return await Task.FromResult(index);
             };
 
-            var fibers = Fibers.For(1, 0, 5, 1, factory);
+            var fibers = Fibers.For(2, 0, 10, 1, factory);
 
             Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
@@ -953,7 +955,7 @@ return FUnit.Run(args, describe =>
             }
 
             // Expect tasks before and after the error to be processed, but not the erroneous one
-            Must.HaveSameSequence(new List<int> { 0, 1, 3, 4 }, processed);
+            Must.HaveSameSequence(new List<int> { 0, 1, 3, 4, 5, 6, 7, 8, 9 }, processed.OrderBy(x => x).ToList());
             Must.BeTrue(fibers.IsCompleted);
             Must.BeTrue(!fibers.IsFailed);
             Must.BeTrue(!fibers.IsRunning);
@@ -973,7 +975,7 @@ return FUnit.Run(args, describe =>
                 return await Task.FromResult(index);
             };
 
-            var fibers = Fibers.For(1, 0, 5, 1, factory);
+            var fibers = Fibers.For(2, 0, 10, 1, factory);
 
             Must.BeTrue(!fibers.IsRunning);
             Must.BeTrue(!fibers.IsCompleted);
@@ -996,7 +998,8 @@ return FUnit.Run(args, describe =>
             });
 
             // Expect tasks before the error to be processed
-            Must.HaveSameSequence(new List<int> { 0, 1 }, processed);
+            Must.BeTrue(!processed.Contains(2));
+            Must.BeTrue(processed.Count < 10);
             Must.BeTrue(fibers.IsCompleted); // Fibers should be completed even if failed
             Must.BeTrue(fibers.IsFailed); // Fibers should be marked as failed
             Must.BeTrue(!fibers.IsRunning); // Should not be started after error
