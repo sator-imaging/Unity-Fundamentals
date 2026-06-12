@@ -915,7 +915,7 @@ return FUnit.Run(args, describe =>
             // Expect tasks before the error to be processed, and no tasks after
             Must.HaveSameSequence(new List<int> { 0, 1 }, processed);
             Must.BeTrue(fibers.IsCompleted);
-            Must.BeTrue(!fibers.IsFailed);
+            Must.BeTrue(fibers.IsFailed);
             Must.BeTrue(!fibers.IsRunning);
         });
 

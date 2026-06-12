@@ -456,6 +456,7 @@ namespace SatorImaging.UnityFundamentals
                         whenAny = Task.WhenAny(needLock_runningTasks);
                     }
 
+                    // Unwraps outer Task<Task> only; never throws even if inner task faulted.
                     activeTask = await whenAny;
 
                     this.Current = await ((Task<TValue>)activeTask);
@@ -479,6 +480,7 @@ namespace SatorImaging.UnityFundamentals
                 switch (b_errorHandler?.Invoke(error, this, ErrorReason.MoveNextAsync))
                 {
                     case ErrorHandlingPolicy.Stop:
+                        this.taskSource.TrySetException(error);
                         loopFinished = true;
                         break;  // must return AFTER finally block.
 
