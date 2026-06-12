@@ -1,7 +1,7 @@
 #:package FUnit@*
 #:package FUnit.Directives@*
 
-//:funit:include ../../Runtime/Threading/Fibers.cs
+#warning funit include ../../Runtime/Threading/Fibers.cs
 
 using SatorImaging.UnityFundamentals;
 

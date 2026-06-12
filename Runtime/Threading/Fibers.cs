@@ -189,7 +189,7 @@ namespace SatorImaging.UnityFundamentals
             /// </summary>
             Skip,
             /// <summary>
-            /// Stop the fiber's execution upon encountering an error.
+            /// Stop the fiber's execution upon encountering an error and mark it as failed.
             /// </summary>
             Stop,
         }
