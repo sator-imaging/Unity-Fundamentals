@@ -181,11 +181,11 @@ namespace SatorImaging.UnityFundamentals
         public enum ErrorHandlingPolicy
         {
             /// <summary>
-            /// Use the default error handling behavior.
+            /// Stop the fiber's execution, mark it as failed, and re-throw the exception.
             /// </summary>
             Default,
             /// <summary>
-            /// Skip the current erroneous item and continue processing.
+            /// Skip the current erroneous item and continue processing without marking the fiber as failed.
             /// </summary>
             Skip,
             /// <summary>
