@@ -181,15 +181,15 @@ namespace SatorImaging.UnityFundamentals
         public enum ErrorHandlingPolicy
         {
             /// <summary>
-            /// Use the default error handling behavior.
+            /// Stop the fiber's execution, mark it as failed, and re-throw the exception.
             /// </summary>
             Default,
             /// <summary>
-            /// Skip the current erroneous item and continue processing.
+            /// Skip the current erroneous item and continue processing without marking the fiber as failed.
             /// </summary>
             Skip,
             /// <summary>
-            /// Stop the fiber's execution upon encountering an error.
+            /// Stop the fiber's execution upon encountering an error and mark it as failed.
             /// </summary>
             Stop,
         }
@@ -456,6 +456,7 @@ namespace SatorImaging.UnityFundamentals
                         whenAny = Task.WhenAny(needLock_runningTasks);
                     }
 
+                    // Unwraps outer Task<Task> only; never throws even if inner task faulted.
                     activeTask = await whenAny;
 
                     this.Current = await ((Task<TValue>)activeTask);
@@ -479,6 +480,7 @@ namespace SatorImaging.UnityFundamentals
                 switch (b_errorHandler?.Invoke(error, this, ErrorReason.MoveNextAsync))
                 {
                     case ErrorHandlingPolicy.Stop:
+                        this.taskSource.TrySetException(error);
                         loopFinished = true;
                         break;  // must return AFTER finally block.
 

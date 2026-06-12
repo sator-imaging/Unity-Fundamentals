@@ -4,9 +4,9 @@
 using System.Linq;
 using SatorImaging.UnityFundamentals;
 
-//:funit:include ../../Burst/Mathematics/EasingFloat.cs
-//:funit:include ../../Burst/Mathematics/EasingDouble.cs
-//:funit:include ../../Burst/Mathematics/Easing_Test.cs
+#warning funit include ../../Burst/Mathematics/EasingFloat.cs
+#warning funit include ../../Burst/Mathematics/EasingDouble.cs
+#warning funit include ../../Burst/Mathematics/Easing_Test.cs
 
 return FUnit.Run(args, describe =>
 {
