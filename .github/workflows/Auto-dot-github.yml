@@ -59,4 +59,4 @@ jobs:
       auto-bump: ${{ inputs.auto-bump }}
 
       # See above
-      auto-bump-args: ''  ### <-- UPDATE HERE #######
+      auto-bump-args: npm  ### <-- UPDATE HERE #######
