@@ -1,13 +1,25 @@
-﻿.*/
-*/**/.*
-
-**/bin/
-**/obj/
+﻿.*
+/*
+bin
+obj
 
 Benchmarks
 Benchmarks.meta
 
-**/BenchmarkDotNet.Artifacts/
-**/Photoshop/
-
 !.github
+!Burst
+!Editor
+!Obsolete
+!Runtime
+!Tests
+
+!.gitignore
+!*.cs
+!*.meta
+!*.asmdef
+!package*.json
+
+*.md
+!README*.md
+!LICENSE.md
+!CHANGELOG.md
