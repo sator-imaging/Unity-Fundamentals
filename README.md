@@ -39,7 +39,7 @@ https://github.com/sator-imaging/Unity-Fundamentals.git#latest
 or use specific version (append desired version at the end: `#vX.Y.Z`).
 
 ```
-https://github.com/sator-imaging/Unity-Fundamentals.git#v1.7.2
+https://github.com/sator-imaging/Unity-Fundamentals.git#1.7.3
 ```
 
 
