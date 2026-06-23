@@ -2,36 +2,35 @@ version: 2
 
 multi-ecosystem-groups:
   default:
-    reviewers:
-      - "sator-imaging"
     commit-message:
-      prefix: "chore(deps)"
-    labels:
-      - "dependabot"
-    versioning-strategy: "increase"
+      prefix: "deps"
+    reviewers: [ "sator-imaging" ]
+    labels: [ "dependabot" ]
+    versioning-strategy: "auto"
     update-types:
-      version-update: semver-minor
+      - "version-update:semver-minor"
+      - "version-update:semver-patch"
     schedule:
       interval: "daily"
       time: "06:00"
       timezone: "Asia/Tokyo"
-    open-pull-requests-limit: 10
     cooldown:
       default-days: 7
       semver-major-days: 21
       semver-minor-days: 14
       semver-patch-days: 7
+    open-pull-requests-limit: 10
 
 updates:
   - package-ecosystem: "npm"
     multi-ecosystem-group: "default"
-    patterns: ["*"]
     directory: "/"
+    patterns: ["*"]
   - package-ecosystem: "bun"
     multi-ecosystem-group: "default"
-    patterns: ["*"]
     directory: "/"
+    patterns: ["*"]
   - package-ecosystem: "nuget"
     multi-ecosystem-group: "default"
-    patterns: ["*"]
     directory: "/"
+    patterns: ["*"]
